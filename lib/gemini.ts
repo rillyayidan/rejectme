@@ -3,6 +3,7 @@
 
 import { VertexAI, HarmCategory, HarmBlockThreshold } from "@google-cloud/vertexai";
 import { buildSystemPrompt, getPersona, type PersonaId } from "./personas";
+import type { StructuredRoastResult } from "@/lib/critique";
 
 // ── Client setup ──────────────────────────────────────────────────────────────
 
@@ -113,6 +114,94 @@ Ingat: setiap kritik harus menyebut bagian spesifik dari CV ini, bukan generik.`
   });
 
   return stream;
+}
+
+/**
+ * Generate structured critique — dipakai untuk fitur CritiqueItem + Fix This.
+ * Berbeda dari streamRoast:
+ * - streamRoast = pengalaman dramatis text panjang
+ * - generateStructuredRoast = data terstruktur untuk UI interaktif
+ */
+export async function generateStructuredRoast(
+  req: RoastRequest
+): Promise<StructuredRoastResult> {
+  const persona = getPersona(req.personaId);
+
+  const prompt = `Kamu adalah ${persona.name}, ${persona.title} di ${persona.company_type}.
+Kandidat apply sebagai: ${req.targetRole}${req.targetCompany ? ` di ${req.targetCompany}` : ""}.
+
+Analisis CV berikut dengan standar persona kamu.
+
+CV:
+---
+${req.cvText}
+---
+
+Berikan response HANYA dalam JSON valid. Jangan pakai markdown. Jangan pakai backticks.
+
+Schema JSON:
+{
+  "personaId": "${req.personaId}",
+  "targetRole": "${req.targetRole}",
+  "targetCompany": ${req.targetCompany ? `"${req.targetCompany}"` : "null"},
+  "overall_impression": "kesan pertama 1-2 kalimat",
+  "verdict": "keputusan singkat apakah CV ini layak lanjut atau tidak",
+  "critiques": [
+    {
+      "id": "critique-1",
+      "category": "ats_readability | role_match | recruiter_clarity | impact_proof | red_flag | formatting | language | missing_info",
+      "severity": "low | medium | high | fatal",
+      "quoted_text": "quote spesifik dari CV yang bermasalah. Kalau masalahnya info hilang, tulis nama info yang hilang, contoh: IPK tidak dicantumkan",
+      "issue": "masalah utama",
+      "reason": "kenapa ini masalah menurut persona kamu",
+      "suggestion": "saran perbaikan yang actionable",
+      "fixable": true
+    }
+  ],
+  "strengths": ["hal yang sudah baik"],
+  "quick_wins": ["perbaikan cepat"],
+  "survival_score_hint": {
+    "estimated_total": 0,
+    "weakest_dimension": "ats_readability | role_match | recruiter_clarity | impact_proof | red_flag | formatting | language | missing_info",
+    "strongest_dimension": "ats_readability | role_match | recruiter_clarity | impact_proof | red_flag | formatting | language | missing_info"
+  }
+}
+
+Aturan penting:
+- critiques harus berisi 4 sampai 8 item.
+- Setiap critique harus spesifik ke isi CV.
+- quoted_text wajib mengutip bagian nyata dari CV jika tersedia.
+- Jangan membuat data palsu.
+- fixable bernilai true hanya kalau AI bisa membantu rewrite text tersebut.
+- Untuk missing info seperti tidak ada IPK/foto/link portfolio, fixable harus false.
+- estimated_total harus angka 0-100.
+- Gunakan bahasa Indonesia sesuai gaya persona.`;
+
+  try {
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 2048,
+        responseMimeType: "application/json",
+      },
+    });
+
+    const raw = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    const clean = jsonMatch ? jsonMatch[0] : raw.replace(/```json|```/g, "").trim();
+
+    const parsed = JSON.parse(clean) as StructuredRoastResult;
+
+    if (!Array.isArray(parsed.critiques)) {
+      throw new Error("Invalid structured roast format: critiques missing");
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error("[RejectMe] Structured roast error:", error);
+    throw new Error("Gagal membuat analisis terstruktur. Coba lagi.");
+  }
 }
 
 /**

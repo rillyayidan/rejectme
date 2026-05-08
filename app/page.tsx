@@ -3,9 +3,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { parsePdfToText } from "@/lib/pdf-parser";
@@ -17,7 +14,8 @@ import {
   SurvivalScore,
   type SurvivalScoreData,
 } from "@/components/score/SurvivalScore";
-
+import { CVInputEditor } from "@/components/cv-editor/CVInputEditor";
+import { RoastControls } from "@/components/roast/RoastControls";
 
 export default function HomePage() {
   const [cvText, setCvText] = useState("");
@@ -171,28 +169,21 @@ export default function HomePage() {
                 fileName={uploadedFileName}
                 onFileSelected={handlePdfUpload}
               />
-
-              <Textarea
+              <CVInputEditor
                 value={cvText}
-                onChange={(event) => setCvText(event.target.value)}
+                onChange={setCvText}
+                disabled={isRoasting}
                 placeholder="Atau paste isi CV kamu di sini..."
-                className="min-h-[280px] border-zinc-700 bg-zinc-950"
               />
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <Input
-                  value={targetRole}
-                  onChange={(event) => setTargetRole(event.target.value)}
-                  placeholder="Target role, contoh: Frontend Developer"
-                  className="border-zinc-700 bg-zinc-950"
-                />
-                <Input
-                  value={targetCompany}
-                  onChange={(event) => setTargetCompany(event.target.value)}
-                  placeholder="Target company, optional"
-                  className="border-zinc-700 bg-zinc-950"
-                />
-              </div>
+              <RoastControls
+                targetRole={targetRole}
+                targetCompany={targetCompany}
+                isLoading={isRoasting}
+                disabled={cvText.trim().length < 50}
+                onTargetRoleChange={setTargetRole}
+                onTargetCompanyChange={setTargetCompany}
+                onSubmit={handleRoast}
+              />
             </CardContent>
           </Card>
 
@@ -206,14 +197,6 @@ export default function HomePage() {
                 onChange={setPersonaId}
                 disabled={isRoasting}
               />
-              <Button
-                onClick={handleRoast}
-                disabled={isRoasting}
-                className="w-full"
-                size="lg"
-              >
-                {isRoasting ? "HRD sedang membaca CV..." : "Roast My CV"}
-              </Button>
 
               {error && (
                 <p className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
