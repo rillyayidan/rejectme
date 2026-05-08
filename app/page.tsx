@@ -13,26 +13,11 @@ import type { PersonaId } from "@/lib/personas";
 import { CVUploadBox } from "@/components/upload/CVUploadBox";
 import { PersonaPicker } from "@/components/roast/PersonaPicker";
 import { RoastPanel } from "@/components/roast/RoastPanel";
+import {
+  SurvivalScore,
+  type SurvivalScoreData,
+} from "@/components/score/SurvivalScore";
 
-type ScoreResponse = {
-  total: number;
-  breakdown: {
-    ats_readability: number;
-    role_match: number;
-    recruiter_clarity: number;
-    impact_proof: number;
-    red_flag_penalty: number;
-  };
-  verdict: string;
-  top_issues: string[];
-  quick_wins: string[];
-  tier: {
-    label: string;
-    emoji: string;
-    color: string;
-    message: string;
-  };
-};
 
 export default function HomePage() {
   const [cvText, setCvText] = useState("");
@@ -41,8 +26,7 @@ export default function HomePage() {
   const [personaId, setPersonaId] = useState<PersonaId>("startup");
 
   const [roast, setRoast] = useState("");
-  const [score, setScore] = useState<ScoreResponse | null>(null);
-  const [isRoasting, setIsRoasting] = useState(false);
+  const [score, setScore] = useState<SurvivalScoreData | null>(null);  const [isRoasting, setIsRoasting] = useState(false);
   const [isScoring, setIsScoring] = useState(false);
   const [error, setError] = useState("");
 
@@ -259,54 +243,7 @@ export default function HomePage() {
               <CardTitle>4. Survival Score</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {isScoring && <p className="text-zinc-400">Menghitung score...</p>}
-
-              {score ? (
-                <>
-                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5">
-                    <div className="text-5xl font-bold">
-                      {score.tier.emoji} {score.total}
-                    </div>
-                    <div className="mt-2 text-lg font-semibold">
-                      {score.tier.label}
-                    </div>
-                    <p className="mt-2 text-sm text-zinc-400">
-                      {score.tier.message}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2 text-sm">
-                    {Object.entries(score.breakdown).map(([key, value]) => (
-                      <div key={key} className="flex justify-between">
-                        <span className="text-zinc-400">{key}</span>
-                        <span className="font-semibold">{value}/100</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold">Top Issues</h4>
-                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-400">
-                      {score.top_issues.map((issue) => (
-                        <li key={issue}>{issue}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold">Quick Wins</h4>
-                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-400">
-                      {score.quick_wins.map((win) => (
-                        <li key={win}>{win}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-zinc-400">
-                  Score akan muncul setelah roast selesai.
-                </p>
-              )}
+              <SurvivalScore score={score} isLoading={isScoring} />
             </CardContent>
           </Card>
         </div>
