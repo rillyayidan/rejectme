@@ -9,7 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@google-cloud/vertexai": "^1.12.0",
+    "@radix-ui/react-slider": "^1.3.6",
+    "ai": "^6.0.176",
+    "firebase": "^12.13.0",
+    "firebase-admin": "^13.9.0",
+    "lucide-react": "^1.14.0",
     "next": "16.2.6",
+    "pdfjs-dist": "^5.7.284",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
