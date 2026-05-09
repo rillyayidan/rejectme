@@ -29,6 +29,10 @@ import type {
   CritiqueItem,
   StructuredRoastResult,
 } from "@/lib/critique";
+import {
+  DiffOverlay,
+  type FixResult,
+} from "@/components/cv-editor/DiffOverlay";
 
 export default function HomePage() {
   const [cvText, setCvText] = useState("");
@@ -53,6 +57,11 @@ export default function HomePage() {
   const [structuredRoast, setStructuredRoast] =
     useState<StructuredRoastResult | null>(null);
   const [isStructuringRoast, setIsStructuringRoast] = useState(false);
+
+  const [selectedCritique, setSelectedCritique] =
+    useState<CritiqueItem | null>(null);
+  const [fixResult, setFixResult] = useState<FixResult | null>(null);
+  const [isFixing, setIsFixing] = useState(false);
 
   const selectedPersonaName =
     personaId === "bumn"
@@ -115,6 +124,106 @@ export default function HomePage() {
       return null;
     } finally {
       setIsStructuringRoast(false);
+    }
+  }
+
+  async function handleFixCritique(critique: CritiqueItem) {
+    setError("");
+    setSelectedCritique(critique);
+    setFixResult(null);
+    setIsFixing(true);
+
+    try {
+      const response = await fetch("/api/fix", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          originalBullet: critique.quoted_text,
+          critiqueReason: critique.reason,
+          personaId,
+          targetRole,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Gagal membuat rewrite.");
+      }
+
+      setFixResult(data as FixResult);
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : "Gagal membuat rewrite.");
+    } finally {
+      setIsFixing(false);
+    }
+  }
+
+  async function handleApplyFix(replacement: string) {
+    if (!selectedCritique) {
+      return;
+    }
+
+    const original = selectedCritique.quoted_text;
+
+    if (!original.trim()) {
+      setError("Tidak ada text original untuk diganti.");
+      return;
+    }
+
+    if (!cvText.includes(original)) {
+      setError(
+        "Text original tidak ditemukan persis di CV. Coba copy rewrite dan paste manual."
+      );
+      return;
+    }
+
+    const updatedCV = cvText.replace(original, replacement);
+
+    setCvText(updatedCV);
+    setSelectedCritique(null);
+    setFixResult(null);
+    setError("");
+
+    // Recalculate score setelah fix diterapkan.
+    await handleScoreWithText(updatedCV);
+  }
+
+  async function handleScoreWithText(nextCvText: string) {
+    setIsScoring(true);
+
+    try {
+      const response = await fetch("/api/score", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cvText: nextCvText,
+          personaId,
+          targetRole,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Gagal menghitung score.");
+      }
+
+      const scoreData = data as SurvivalScoreData;
+      setScore(scoreData);
+
+      return scoreData;
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : "Gagal menghitung score.");
+      return null;
+    } finally {
+      setIsScoring(false);
     }
   }
 
@@ -194,10 +303,12 @@ export default function HomePage() {
         setRoast((prev) => prev + chunk);
       }
 
-      const [finalScore, finalStructuredRoast] = await Promise.all([
-        handleScore(),
-        handleStructuredRoast(),
-      ]);
+      const finalScore = await handleScore();
+
+      // Kasih jeda kecil supaya Vertex AI tidak kena burst request.
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      const finalStructuredRoast = await handleStructuredRoast();
 
       await updateRoastSession({
         user,
@@ -229,38 +340,7 @@ export default function HomePage() {
   }
 
   async function handleScore() {
-    setIsScoring(true);
-
-    try {
-      const response = await fetch("/api/score", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          cvText,
-          personaId,
-          targetRole,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error ?? "Gagal menghitung score.");
-      }
-
-      const scoreData = data as SurvivalScoreData;
-      setScore(scoreData);
-
-      return scoreData;
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : "Gagal menghitung score.");
-      return null;
-    } finally {
-      setIsScoring(false);
-    }
+    return handleScoreWithText(cvText);
   }
 
   function handleSelectSession(session: RoastSession) {
@@ -403,11 +483,25 @@ export default function HomePage() {
             <CritiqueList
               structuredRoast={structuredRoast}
               isLoading={isStructuringRoast}
-              onFix={(critique: CritiqueItem) => {
-                console.log("Fix critique:", critique);
-                setError("Fitur Fix This akan kita sambungkan di step berikutnya.");
-              }}
+              onFix={handleFixCritique}
             />
+
+            {selectedCritique ? (
+              <div className="mt-4">
+                <DiffOverlay
+                  originalText={selectedCritique.quoted_text}
+                  critiqueReason={selectedCritique.reason}
+                  result={fixResult}
+                  isLoading={isFixing}
+                  onApply={handleApplyFix}
+                  onClose={() => {
+                    setSelectedCritique(null);
+                    setFixResult(null);
+                    setIsFixing(false);
+                  }}
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </section>

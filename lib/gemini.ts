@@ -130,6 +130,58 @@ function parseGeminiJson<T>(raw: string): T {
   }
 }
 
+function isRetryableGeminiError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+
+  return (
+    message.includes("429") ||
+    message.includes("resource_exhausted") ||
+    message.includes("too many requests") ||
+    message.includes("503") ||
+    message.includes("unavailable")
+  );
+}
+
+async function sleep(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withGeminiRetry<T>(
+  operation: () => Promise<T>,
+  label: string,
+  maxRetries = 2
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+
+      if (!isRetryableGeminiError(error) || attempt === maxRetries) {
+        throw error;
+      }
+
+      const delayMs = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 500);
+
+      console.warn(
+        `[RejectMe] ${label} hit retryable Gemini error. Retrying in ${delayMs}ms... attempt ${
+          attempt + 1
+        }/${maxRetries}`
+      );
+
+      await sleep(delayMs);
+    }
+  }
+
+  throw lastError;
+}
+
 function normalizeStructuredRoast(
   parsed: StructuredRoastResult,
   req: RoastRequest
@@ -148,6 +200,39 @@ function normalizeStructuredRoast(
       weakest_dimension: "impact_proof",
       strongest_dimension: "role_match",
     },
+  };
+}
+
+function normalizeSurvivalScoreResult(
+  parsed: SurvivalScoreResult
+): SurvivalScoreResult {
+  return {
+    total: typeof parsed.total === "number" ? parsed.total : 0,
+    breakdown: {
+      ats_readability:
+        typeof parsed.breakdown?.ats_readability === "number"
+          ? parsed.breakdown.ats_readability
+          : 0,
+      role_match:
+        typeof parsed.breakdown?.role_match === "number"
+          ? parsed.breakdown.role_match
+          : 0,
+      recruiter_clarity:
+        typeof parsed.breakdown?.recruiter_clarity === "number"
+          ? parsed.breakdown.recruiter_clarity
+          : 0,
+      impact_proof:
+        typeof parsed.breakdown?.impact_proof === "number"
+          ? parsed.breakdown.impact_proof
+          : 0,
+      red_flag_penalty:
+        typeof parsed.breakdown?.red_flag_penalty === "number"
+          ? parsed.breakdown.red_flag_penalty
+          : 0,
+    },
+    verdict: parsed.verdict ?? "Belum ada verdict.",
+    top_issues: Array.isArray(parsed.top_issues) ? parsed.top_issues : [],
+    quick_wins: Array.isArray(parsed.quick_wins) ? parsed.quick_wins : [],
   };
 }
 
@@ -218,14 +303,18 @@ Aturan penting:
 - Gunakan bahasa Indonesia sesuai gaya persona.`;
 
   try {
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 4096,
-        responseMimeType: "application/json",
-      },
-    });
+    const result = await withGeminiRetry(
+      () =>
+        model.generateContent({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 4096,
+            responseMimeType: "application/json",
+          },
+        }),
+      "Structured roast"
+    );
 
     const raw = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
 
@@ -278,13 +367,17 @@ IDEAL: [rewrite ideal dengan placeholder metric jika perlu, contoh: "meningkatka
 Jangan tambahkan penjelasan lain. Hanya dua baris output.`;
 
   try {
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 512,
-      },
-    });
+    const result = await withGeminiRetry(
+      () =>
+        model.generateContent({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 512,
+          },
+        }),
+      "Fix bullet"
+    );
 
     return result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "Gagal generate rewrite.";
   } catch (error) {
@@ -319,20 +412,31 @@ Nilai CV ini dengan rubrik spesifikmu. Berikan response HANYA dalam format JSON 
   "quick_wins": ["quick win 1", "quick win 2", "quick win 3"]
 }
 
+WAJIB:
+- Field top_issues harus selalu ada dan berisi array string.
+- Field quick_wins harus selalu ada dan berisi array string.
+- Jangan mengubah nama field.
+- Jangan pakai camelCase seperti topIssues atau quickWins.
+- Response harus JSON valid tanpa markdown.
+
 CV yang dinilai:
 ---
 ${req.cvText}
 ---`;
 
   try {
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.1,   // Lebih deterministik untuk scoring
-        maxOutputTokens: 2048,
-        responseMimeType: "application/json",
-      },
-    });
+    const result = await withGeminiRetry(
+      () =>
+        model.generateContent({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 2048,
+            responseMimeType: "application/json",
+          },
+        }),
+      "Score calculation"
+    );
 
     const raw = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
 
@@ -346,12 +450,13 @@ ${req.cvText}
       throw parseError;
     }
 
-    // Validasi basic
-    if (typeof parsed.total !== "number") {
+    const normalized = normalizeSurvivalScoreResult(parsed);
+
+    if (typeof normalized.total !== "number") {
       throw new Error("Invalid score format from Gemini");
     }
 
-    return parsed;
+    return normalized;
   } catch (error) {
     console.error("[RejectMe] Score calculation error:", error);
     // Fallback score kalau Gemini gagal

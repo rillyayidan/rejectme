@@ -1,9 +1,14 @@
-
 // components/score/SurvivalScore.tsx
 
 "use client";
 
-import { Loader2, Trophy, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Loader2,
+  Trophy,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 
 interface ScoreTier {
   label: string;
@@ -22,8 +27,8 @@ export interface SurvivalScoreData {
     red_flag_penalty: number;
   };
   verdict: string;
-  top_issues: string[];
-  quick_wins: string[];
+  top_issues?: string[];
+  quick_wins?: string[];
   tier: ScoreTier;
 }
 
@@ -38,6 +43,21 @@ const BREAKDOWN_LABELS: Record<keyof SurvivalScoreData["breakdown"], string> = {
   recruiter_clarity: "Recruiter Clarity",
   impact_proof: "Impact Proof",
   red_flag_penalty: "No Red Flags",
+};
+
+const DEFAULT_BREAKDOWN: SurvivalScoreData["breakdown"] = {
+  ats_readability: 0,
+  role_match: 0,
+  recruiter_clarity: 0,
+  impact_proof: 0,
+  red_flag_penalty: 0,
+};
+
+const DEFAULT_TIER: ScoreTier = {
+  label: "Unknown",
+  emoji: "🧪",
+  color: "zinc",
+  message: "Score berhasil dibuat, tapi beberapa detail belum tersedia.",
 };
 
 function getScoreIcon(score: number) {
@@ -56,8 +76,24 @@ function getScoreTone(score: number) {
 }
 
 function clampScore(value: number) {
-  if (Number.isNaN(value)) return 0;
+  if (typeof value !== "number" || Number.isNaN(value)) return 0;
   return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+function normalizeScore(score: SurvivalScoreData) {
+  const breakdown = {
+    ...DEFAULT_BREAKDOWN,
+    ...(score.breakdown ?? {}),
+  };
+
+  return {
+    total: clampScore(score.total),
+    breakdown,
+    verdict: score.verdict || "Belum ada verdict.",
+    topIssues: Array.isArray(score.top_issues) ? score.top_issues : [],
+    quickWins: Array.isArray(score.quick_wins) ? score.quick_wins : [],
+    tier: score.tier ?? DEFAULT_TIER,
+  };
 }
 
 export function SurvivalScore({ score, isLoading = false }: SurvivalScoreProps) {
@@ -87,8 +123,8 @@ export function SurvivalScore({ score, isLoading = false }: SurvivalScoreProps) 
     );
   }
 
-  const total = clampScore(score.total);
-  const tone = getScoreTone(total);
+  const normalized = normalizeScore(score);
+  const tone = getScoreTone(normalized.total);
 
   return (
     <div className="space-y-4">
@@ -97,21 +133,25 @@ export function SurvivalScore({ score, isLoading = false }: SurvivalScoreProps) 
           <div>
             <p className="text-sm font-medium opacity-80">Survival Score</p>
             <div className="mt-2 flex items-end gap-2">
-              <span className="text-6xl font-bold tracking-tight">{total}</span>
+              <span className="text-6xl font-bold tracking-tight">
+                {normalized.total}
+              </span>
               <span className="pb-2 text-lg font-semibold opacity-70">/100</span>
             </div>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
-            {getScoreIcon(total)}
+            {getScoreIcon(normalized.total)}
           </div>
         </div>
 
         <div className="mt-4">
           <p className="text-lg font-semibold">
-            {score.tier.emoji} {score.tier.label}
+            {normalized.tier.emoji} {normalized.tier.label}
           </p>
-          <p className="mt-1 text-sm leading-6 opacity-80">{score.tier.message}</p>
+          <p className="mt-1 text-sm leading-6 opacity-80">
+            {normalized.tier.message}
+          </p>
         </div>
       </div>
 
@@ -119,9 +159,11 @@ export function SurvivalScore({ score, isLoading = false }: SurvivalScoreProps) 
         <p className="mb-3 text-sm font-semibold text-zinc-100">Breakdown</p>
 
         <div className="space-y-3">
-          {Object.entries(score.breakdown).map(([key, rawValue]) => {
+          {Object.entries(normalized.breakdown).map(([key, rawValue]) => {
             const value = clampScore(rawValue);
-            const label = BREAKDOWN_LABELS[key as keyof SurvivalScoreData["breakdown"]];
+            const label =
+              BREAKDOWN_LABELS[key as keyof SurvivalScoreData["breakdown"]] ??
+              key;
 
             return (
               <div key={key} className="space-y-1.5">
@@ -144,26 +186,42 @@ export function SurvivalScore({ score, isLoading = false }: SurvivalScoreProps) 
 
       <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
         <p className="text-sm font-semibold text-zinc-100">Verdict</p>
-        <p className="mt-2 text-sm leading-6 text-zinc-400">{score.verdict}</p>
+        <p className="mt-2 text-sm leading-6 text-zinc-400">
+          {normalized.verdict}
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4">
           <p className="text-sm font-semibold text-red-100">Top Issues</p>
-          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-red-100/75">
-            {score.top_issues.map((issue) => (
-              <li key={issue}>{issue}</li>
-            ))}
-          </ul>
+
+          {normalized.topIssues.length > 0 ? (
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-red-100/75">
+              {normalized.topIssues.map((issue) => (
+                <li key={issue}>{issue}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm leading-6 text-red-100/60">
+              Tidak ada top issues yang dikirim oleh AI.
+            </p>
+          )}
         </div>
 
         <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
           <p className="text-sm font-semibold text-emerald-100">Quick Wins</p>
-          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-emerald-100/75">
-            {score.quick_wins.map((win) => (
-              <li key={win}>{win}</li>
-            ))}
-          </ul>
+
+          {normalized.quickWins.length > 0 ? (
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-emerald-100/75">
+              {normalized.quickWins.map((win) => (
+                <li key={win}>{win}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm leading-6 text-emerald-100/60">
+              Tidak ada quick wins yang dikirim oleh AI.
+            </p>
+          )}
         </div>
       </div>
     </div>
