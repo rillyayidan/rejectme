@@ -16,6 +16,7 @@ import type { User } from "firebase/auth";
 import type { PersonaId } from "@/lib/personas";
 import type { SurvivalScoreData } from "@/components/score/SurvivalScore";
 import { db } from "@/firebase/config";
+import type { StructuredRoastResult } from "@/lib/critique";
 
 interface CreateRoastSessionInput {
   user: User;
@@ -30,6 +31,7 @@ interface UpdateRoastSessionInput {
   sessionId: string;
   roast?: string;
   score?: SurvivalScoreData | null;
+  structuredRoast?: StructuredRoastResult | null;
   status?: "draft" | "roasting" | "completed" | "failed";
   errorMessage?: string;
 }
@@ -50,6 +52,7 @@ export async function createRoastSession({
     targetCompany: targetCompany ?? "",
     roast: "",
     score: null,
+    structuredRoast: null,
     status: "roasting",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -63,6 +66,7 @@ export async function updateRoastSession({
   sessionId,
   roast,
   score,
+  structuredRoast,
   status,
   errorMessage,
 }: UpdateRoastSessionInput) {
@@ -71,6 +75,7 @@ export async function updateRoastSession({
   await updateDoc(sessionRef, {
     ...(roast !== undefined ? { roast } : {}),
     ...(score !== undefined ? { score } : {}),
+    ...(structuredRoast !== undefined ? { structuredRoast } : {}),
     ...(status !== undefined ? { status } : {}),
     ...(errorMessage !== undefined ? { errorMessage } : {}),
     updatedAt: serverTimestamp(),
@@ -85,6 +90,7 @@ export interface RoastSession {
   targetCompany: string;
   roast: string;
   score: SurvivalScoreData | null;
+  structuredRoast: StructuredRoastResult | null;
   status: "draft" | "roasting" | "completed" | "failed";
   errorMessage?: string;
   createdAt?: Timestamp;
@@ -115,6 +121,7 @@ export function subscribeToRoastSessions(
         targetCompany: data.targetCompany ?? "",
         roast: data.roast ?? "",
         score: data.score ?? null,
+        structuredRoast: data.structuredRoast ?? null,
         status: data.status ?? "draft",
         errorMessage: data.errorMessage,
         createdAt: data.createdAt,
