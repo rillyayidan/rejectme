@@ -4,8 +4,13 @@ import {
   addDoc,
   collection,
   doc,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
   serverTimestamp,
   updateDoc,
+  type Timestamp,
 } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import type { PersonaId } from "@/lib/personas";
@@ -69,5 +74,54 @@ export async function updateRoastSession({
     ...(status !== undefined ? { status } : {}),
     ...(errorMessage !== undefined ? { errorMessage } : {}),
     updatedAt: serverTimestamp(),
+  });
+}
+
+export interface RoastSession {
+  id: string;
+  cvText: string;
+  personaId: PersonaId;
+  targetRole: string;
+  targetCompany: string;
+  roast: string;
+  score: SurvivalScoreData | null;
+  status: "draft" | "roasting" | "completed" | "failed";
+  errorMessage?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+export function subscribeToRoastSessions(
+  user: User,
+  callback: (sessions: RoastSession[]) => void
+) {
+  const sessionsRef = collection(db, "users", user.uid, "sessions");
+
+  const sessionsQuery = query(
+    sessionsRef,
+    orderBy("createdAt", "desc"),
+    limit(10)
+  );
+
+  return onSnapshot(sessionsQuery, (snapshot) => {
+    const sessions = snapshot.docs.map((document) => {
+      const data = document.data();
+
+      return {
+        id: document.id,
+        cvText: data.cvText ?? "",
+        personaId: data.personaId ?? "startup",
+        targetRole: data.targetRole ?? "",
+        targetCompany: data.targetCompany ?? "",
+        roast: data.roast ?? "",
+        score: data.score ?? null,
+        status: data.status ?? "draft",
+        errorMessage: data.errorMessage,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      } as RoastSession;
+    });
+
+    callback(sessions);
   });
 }
