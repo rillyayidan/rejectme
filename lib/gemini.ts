@@ -2,6 +2,7 @@
 // Vertex AI client untuk RejectMe — handles roast streaming, bullet fix, dan survival scoring.
 
 import { VertexAI, HarmCategory, HarmBlockThreshold } from "@google-cloud/vertexai";
+import { jsonrepair } from "jsonrepair";
 import { buildSystemPrompt, getPersona, type PersonaId } from "./personas";
 import type { StructuredRoastResult } from "@/lib/critique";
 
@@ -13,16 +14,15 @@ const vertex = new VertexAI({
 });
 
 const model = vertex.getGenerativeModel({
-  model: "gemini-1.5-pro",
+  model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
   safetySettings: [
-    // Kita turunkan threshold biar persona bisa "galak" tanpa diblok
     { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
     { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
     { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
     { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
   ],
   generationConfig: {
-    temperature: 0.8,      // Sedikit kreatif biar roast-nya tidak robotic
+    temperature: 0.8,
     topP: 0.95,
     maxOutputTokens: 2048,
   },
@@ -116,6 +116,20 @@ Ingat: setiap kritik harus menyebut bagian spesifik dari CV ini, bukan generik.`
   return stream;
 }
 
+function parseGeminiJson<T>(raw: string): T {
+  const withoutFence = raw.replace(/```json|```/g, "").trim();
+
+  const jsonMatch = withoutFence.match(/\{[\s\S]*\}/);
+  const candidate = jsonMatch ? jsonMatch[0] : withoutFence;
+
+  try {
+    return JSON.parse(candidate) as T;
+  } catch {
+    const repaired = jsonrepair(candidate);
+    return JSON.parse(repaired) as T;
+  }
+}
+
 /**
  * Generate structured critique — dipakai untuk fitur CritiqueItem + Fix This.
  * Berbeda dari streamRoast:
@@ -137,7 +151,12 @@ CV:
 ${req.cvText}
 ---
 
-Berikan response HANYA dalam JSON valid. Jangan pakai markdown. Jangan pakai backticks.
+Berikan response HANYA dalam JSON valid.
+Jangan pakai markdown.
+Jangan pakai backticks.
+Jangan menulis newline di dalam string.
+Jangan memakai tanda kutip ganda di dalam value string; gunakan tanda kutip tunggal jika perlu.
+Pastikan semua string tertutup dengan benar.
 
 Schema JSON:
 {
@@ -181,17 +200,23 @@ Aturan penting:
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.4,
-        maxOutputTokens: 2048,
+        temperature: 0.2,
+        maxOutputTokens: 4096,
         responseMimeType: "application/json",
       },
     });
 
     const raw = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    const clean = jsonMatch ? jsonMatch[0] : raw.replace(/```json|```/g, "").trim();
 
-    const parsed = JSON.parse(clean) as StructuredRoastResult;
+    let parsed: StructuredRoastResult;
+
+    try {
+      parsed = parseGeminiJson<StructuredRoastResult>(raw);
+    } catch (parseError) {
+      console.error("[RejectMe] Failed to parse structured roast JSON.");
+      console.error("[RejectMe] Raw Gemini output:", raw);
+      throw parseError;
+    }
 
     if (!Array.isArray(parsed.critiques)) {
       throw new Error("Invalid structured roast format: critiques missing");
