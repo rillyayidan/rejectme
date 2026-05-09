@@ -40,6 +40,9 @@ export default function HomePage() {
   const [pdfError, setPdfError] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState("");
 
+  const { user, isAuthLoading } = useCurrentUser();
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+
   const selectedPersonaName =
     personaId === "bumn"
       ? "Pak Hendra"
@@ -68,6 +71,7 @@ export default function HomePage() {
     setError("");
     setRoast("");
     setScore(null);
+    setCurrentSessionId(null);
 
     if (cvText.trim().length < 50) {
       setError("CV terlalu pendek. Upload PDF atau paste isi CV dulu.");
@@ -79,9 +83,32 @@ export default function HomePage() {
       return;
     }
 
+    if (isAuthLoading) {
+      setError("Auth masih loading. Tunggu sebentar lalu coba lagi.");
+      return;
+    }
+
+    if (!user) {
+      setError("Login dengan Google dulu sebelum roast CV.");
+      return;
+    }
+
     setIsRoasting(true);
 
+    let sessionId: string | null = null;
+    let fullRoast = "";
+
     try {
+      sessionId = await createRoastSession({
+        user,
+        cvText,
+        personaId,
+        targetRole: targetRole.trim(),
+        targetCompany: targetCompany.trim(),
+      });
+
+      setCurrentSessionId(sessionId);
+
       const response = await fetch("/api/roast", {
         method: "POST",
         headers: {
@@ -111,13 +138,35 @@ export default function HomePage() {
         }
 
         const chunk = decoder.decode(value);
+        fullRoast += chunk;
         setRoast((prev) => prev + chunk);
       }
 
-      await handleScore();
+      const finalScore = await handleScore();
+
+      await updateRoastSession({
+        user,
+        sessionId,
+        roast: fullRoast,
+        score: finalScore,
+        status: "completed",
+      });
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "Terjadi error.");
+
+      const message = err instanceof Error ? err.message : "Terjadi error.";
+      setError(message);
+
+      if (user && sessionId) {
+        await updateRoastSession({
+          user,
+          sessionId,
+          status: "failed",
+          errorMessage: message,
+        }).catch((updateError) => {
+          console.error("[handleRoast] Failed to mark session as failed:", updateError);
+        });
+      }
     } finally {
       setIsRoasting(false);
     }
@@ -145,10 +194,14 @@ export default function HomePage() {
         throw new Error(data.error ?? "Gagal menghitung score.");
       }
 
-      setScore(data);
+      const scoreData = data as SurvivalScoreData;
+      setScore(scoreData);
+
+      return scoreData;
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : "Gagal menghitung score.");
+      return null;
     } finally {
       setIsScoring(false);
     }
@@ -224,6 +277,11 @@ export default function HomePage() {
               {error ? (
                 <p className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
                   {error}
+                </p>
+              ) : null}
+              {currentSessionId ? (
+                <p className="rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-xs text-zinc-400">
+                  Session saved: {currentSessionId}
                 </p>
               ) : null}
             </CardContent>
