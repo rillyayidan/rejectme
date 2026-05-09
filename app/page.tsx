@@ -24,6 +24,11 @@ import {
   type RoastSession,
 } from "@/firebase/sessions";
 import { SessionHistory } from "@/components/history/SessionHistory";
+import { CritiqueList } from "@/components/roast/CritiqueList";
+import type {
+  CritiqueItem,
+  StructuredRoastResult,
+} from "@/lib/critique";
 
 export default function HomePage() {
   const [cvText, setCvText] = useState("");
@@ -44,6 +49,10 @@ export default function HomePage() {
 
   const { user, isAuthLoading } = useCurrentUser();
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+
+  const [structuredRoast, setStructuredRoast] =
+    useState<StructuredRoastResult | null>(null);
+  const [isStructuringRoast, setIsStructuringRoast] = useState(false);
 
   const selectedPersonaName =
     personaId === "bumn"
@@ -69,11 +78,52 @@ export default function HomePage() {
     }
   }
 
+  async function handleStructuredRoast() {
+    setIsStructuringRoast(true);
+
+    try {
+      const response = await fetch("/api/structured-roast", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cvText,
+          personaId,
+          targetRole,
+          targetCompany,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Gagal membuat structured roast.");
+      }
+
+      const structuredData = data as StructuredRoastResult;
+      setStructuredRoast(structuredData);
+
+      return structuredData;
+    } catch (err) {
+      console.error(err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Gagal membuat structured roast."
+      );
+      return null;
+    } finally {
+      setIsStructuringRoast(false);
+    }
+  }
+
   async function handleRoast() {
     setError("");
     setRoast("");
     setScore(null);
     setCurrentSessionId(null);
+    setStructuredRoast(null);
 
     if (cvText.trim().length < 50) {
       setError("CV terlalu pendek. Upload PDF atau paste isi CV dulu.");
@@ -144,13 +194,17 @@ export default function HomePage() {
         setRoast((prev) => prev + chunk);
       }
 
-      const finalScore = await handleScore();
+      const [finalScore, finalStructuredRoast] = await Promise.all([
+        handleScore(),
+        handleStructuredRoast(),
+      ]);
 
       await updateRoastSession({
         user,
         sessionId,
         roast: fullRoast,
         score: finalScore,
+        structuredRoast: finalStructuredRoast,
         status: "completed",
       });
     } catch (err) {
@@ -217,6 +271,7 @@ export default function HomePage() {
     setTargetCompany(session.targetCompany ?? "");
     setRoast(session.roast ?? "");
     setScore(session.score ?? null);
+    setStructuredRoast(session.structuredRoast ?? null);
     setError("");
   }
 
@@ -338,6 +393,23 @@ export default function HomePage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="border-zinc-800 bg-zinc-900 text-zinc-50">
+          <CardHeader>
+            <CardTitle>5. Critique Items</CardTitle>
+          </CardHeader>
+
+          <CardContent>
+            <CritiqueList
+              structuredRoast={structuredRoast}
+              isLoading={isStructuringRoast}
+              onFix={(critique: CritiqueItem) => {
+                console.log("Fix critique:", critique);
+                setError("Fitur Fix This akan kita sambungkan di step berikutnya.");
+              }}
+            />
+          </CardContent>
+        </Card>
       </section>
     </main>
   );

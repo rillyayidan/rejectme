@@ -130,6 +130,27 @@ function parseGeminiJson<T>(raw: string): T {
   }
 }
 
+function normalizeStructuredRoast(
+  parsed: StructuredRoastResult,
+  req: RoastRequest
+): StructuredRoastResult {
+  return {
+    personaId: parsed.personaId ?? req.personaId,
+    targetRole: parsed.targetRole ?? req.targetRole,
+    targetCompany: parsed.targetCompany ?? req.targetCompany,
+    overall_impression: parsed.overall_impression ?? "",
+    verdict: parsed.verdict ?? "",
+    critiques: Array.isArray(parsed.critiques) ? parsed.critiques : [],
+    strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
+    quick_wins: Array.isArray(parsed.quick_wins) ? parsed.quick_wins : [],
+    survival_score_hint: parsed.survival_score_hint ?? {
+      estimated_total: 0,
+      weakest_dimension: "impact_proof",
+      strongest_dimension: "role_match",
+    },
+  };
+}
+
 /**
  * Generate structured critique — dipakai untuk fitur CritiqueItem + Fix This.
  * Berbeda dari streamRoast:
@@ -218,11 +239,13 @@ Aturan penting:
       throw parseError;
     }
 
-    if (!Array.isArray(parsed.critiques)) {
+    const normalized = normalizeStructuredRoast(parsed, req);
+
+    if (!Array.isArray(normalized.critiques)) {
       throw new Error("Invalid structured roast format: critiques missing");
     }
 
-    return parsed;
+    return normalized;
   } catch (error) {
     console.error("[RejectMe] Structured roast error:", error);
     throw new Error("Gagal membuat analisis terstruktur. Coba lagi.");
@@ -305,17 +328,23 @@ ${req.cvText}
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.3,   // Lebih deterministik untuk scoring
-        maxOutputTokens: 1024,
+        temperature: 0.1,   // Lebih deterministik untuk scoring
+        maxOutputTokens: 2048,
         responseMimeType: "application/json",
       },
     });
 
     const raw = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
 
-    // Strip markdown fences kalau ada
-    const clean = raw.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean) as SurvivalScoreResult;
+    let parsed: SurvivalScoreResult;
+
+    try {
+      parsed = parseGeminiJson<SurvivalScoreResult>(raw);
+    } catch (parseError) {
+      console.error("[RejectMe] Failed to parse score JSON.");
+      console.error("[RejectMe] Raw score output:", raw);
+      throw parseError;
+    }
 
     // Validasi basic
     if (typeof parsed.total !== "number") {
