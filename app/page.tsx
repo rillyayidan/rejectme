@@ -21,7 +21,9 @@ import { useCurrentUser } from "@/firebase/use-current-user";
 import {
   createRoastSession,
   updateRoastSession,
+  type RoastSession,
 } from "@/firebase/sessions";
+import { SessionHistory } from "@/components/history/SessionHistory";
 
 export default function HomePage() {
   const [cvText, setCvText] = useState("");
@@ -207,6 +209,17 @@ export default function HomePage() {
     }
   }
 
+  function handleSelectSession(session: RoastSession) {
+    setCurrentSessionId(session.id);
+    setCvText(session.cvText);
+    setPersonaId(session.personaId);
+    setTargetRole(session.targetRole);
+    setTargetCompany(session.targetCompany ?? "");
+    setRoast(session.roast ?? "");
+    setScore(session.score ?? null);
+    setError("");
+  }
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
       <section className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8">
@@ -279,11 +292,23 @@ export default function HomePage() {
                   {error}
                 </p>
               ) : null}
+
               {currentSessionId ? (
                 <p className="rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-xs text-zinc-400">
                   Session saved: {currentSessionId}
                 </p>
               ) : null}
+
+              <div className="border-t border-zinc-800 pt-4">
+                <div className="mb-3">
+                  <h3 className="font-semibold text-zinc-100">Roast History</h3>
+                  <p className="text-sm text-zinc-500">
+                    Klik session lama untuk load hasil sebelumnya.
+                  </p>
+                </div>
+
+                <SessionHistory user={user} onSelectSession={handleSelectSession} />
+              </div>
             </CardContent>
           </Card>
         </div>
