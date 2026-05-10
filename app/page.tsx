@@ -183,13 +183,46 @@ export default function HomePage() {
 
     const updatedCV = cvText.replace(original, replacement);
 
+    let updatedStructuredRoast: StructuredRoastResult | null = null;
+
+    setStructuredRoast((prev) => {
+      if (!prev || !selectedCritique) {
+        return prev;
+      }
+
+      updatedStructuredRoast = {
+        ...prev,
+        critiques: prev.critiques.filter(
+          (critique) => critique.id !== selectedCritique.id
+        ),
+        quick_wins: [
+          ...(prev.quick_wins ?? []),
+          `Fixed: ${selectedCritique.issue}`,
+        ],
+      };
+
+      return updatedStructuredRoast;
+    });
+
     setCvText(updatedCV);
     setSelectedCritique(null);
     setFixResult(null);
     setError("");
 
-    // Recalculate score setelah fix diterapkan.
-    await handleScoreWithText(updatedCV);
+    const nextScore = await handleScoreWithText(updatedCV);
+
+    if (user && currentSessionId) {
+      await updateRoastSession({
+        user,
+        sessionId: currentSessionId,
+        cvText: updatedCV,
+        score: nextScore,
+        structuredRoast: updatedStructuredRoast,
+        status: "completed",
+      }).catch((error) => {
+        console.error("[handleApplyFix] Failed to update session:", error);
+      });
+    }
   }
 
   async function handleScoreWithText(nextCvText: string) {

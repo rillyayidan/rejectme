@@ -130,19 +130,41 @@ function parseGeminiJson<T>(raw: string): T {
   }
 }
 
-function isRetryableGeminiError(error: unknown) {
-  if (!(error instanceof Error)) {
-    return false;
+function getErrorText(error: unknown): string {
+  if (!error) return "";
+
+  if (error instanceof Error) {
+    const cause = "cause" in error ? String(error.cause) : "";
+
+    return [
+      error.name,
+      error.message,
+      error.stack,
+      cause,
+      JSON.stringify(error, Object.getOwnPropertyNames(error)),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
   }
 
-  const message = error.message.toLowerCase();
+  return String(error).toLowerCase();
+}
+
+function isRetryableGeminiError(error: unknown) {
+  const message = getErrorText(error);
 
   return (
     message.includes("429") ||
     message.includes("resource_exhausted") ||
     message.includes("too many requests") ||
     message.includes("503") ||
-    message.includes("unavailable")
+    message.includes("unavailable") ||
+    message.includes("fetch failed") ||
+    message.includes("headers timeout") ||
+    message.includes("und_err_headers_timeout") ||
+    message.includes("socket") ||
+    message.includes("timeout")
   );
 }
 
@@ -150,16 +172,39 @@ async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  label: string
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 async function withGeminiRetry<T>(
   operation: () => Promise<T>,
   label: string,
-  maxRetries = 2
+  maxRetries = 2,
+  timeoutMs = 25000
 ): Promise<T> {
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await operation();
+      return await withTimeout(operation(), timeoutMs, label);
     } catch (error) {
       lastError = error;
 
@@ -167,7 +212,8 @@ async function withGeminiRetry<T>(
         throw error;
       }
 
-      const delayMs = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 500);
+      const delayMs =
+        1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 500);
 
       console.warn(
         `[RejectMe] ${label} hit retryable Gemini error. Retrying in ${delayMs}ms... attempt ${
@@ -341,6 +387,15 @@ Aturan penting:
   }
 }
 
+function createFallbackFixBullet(req: FixRequest): string {
+  const cleanedBullet = req.originalBullet.trim().replace(/^[-•]\s*/, "");
+
+  return [
+    `MINIMAL: ${cleanedBullet}`,
+    `IDEAL: Mengoptimalkan ${cleanedBullet.toLowerCase()} untuk mendukung target role ${req.targetRole}, dengan menambahkan konteks, kontribusi spesifik, dan hasil terukur seperti [metric] dalam [periode].`,
+  ].join("\n");
+}
+
 /**
  * Fix satu bullet point — returns teks rewrite langsung (non-streaming).
  * Dipakai untuk tombol "Fix This" di CV editor.
@@ -372,16 +427,23 @@ Jangan tambahkan penjelasan lain. Hanya dua baris output.`;
         model.generateContent({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 512,
+            temperature: 0.4,
+            maxOutputTokens: 384,
           },
         }),
-      "Fix bullet"
+      "Fix bullet",
+      2,
+      18000
     );
 
     return result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "Gagal generate rewrite.";
   } catch (error) {
     console.error("[RejectMe] Fix bullet error:", error);
+
+    if (isRetryableGeminiError(error)) {
+      return createFallbackFixBullet(req);
+    }
+
     throw new Error("Gagal memperbaiki bullet point. Coba lagi.");
   }
 }

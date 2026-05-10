@@ -29,6 +29,7 @@ interface CreateRoastSessionInput {
 interface UpdateRoastSessionInput {
   user: User;
   sessionId: string;
+  cvText?: string;
   roast?: string;
   score?: SurvivalScoreData | null;
   structuredRoast?: StructuredRoastResult | null;
@@ -64,6 +65,7 @@ export async function createRoastSession({
 export async function updateRoastSession({
   user,
   sessionId,
+  cvText,
   roast,
   score,
   structuredRoast,
@@ -73,6 +75,7 @@ export async function updateRoastSession({
   const sessionRef = doc(db, "users", user.uid, "sessions", sessionId);
 
   await updateDoc(sessionRef, {
+    ...(cvText !== undefined ? { cvText } : {}),
     ...(roast !== undefined ? { roast } : {}),
     ...(score !== undefined ? { score } : {}),
     ...(structuredRoast !== undefined ? { structuredRoast } : {}),

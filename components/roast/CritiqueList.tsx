@@ -93,8 +93,8 @@ export function CritiqueList({
           />
         ))
       ) : (
-        <div className="rounded-2xl border border-zinc-800 bg-black/30 p-5 text-sm text-zinc-400">
-          Structured roast berhasil, tapi tidak ada critique item yang valid.
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 text-sm text-emerald-100/80">
+          Semua critique item sudah dibereskan atau tidak ada kritik fixable yang tersisa.
         </div>
       )}
 
