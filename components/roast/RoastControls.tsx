@@ -33,7 +33,7 @@ export function RoastControls({
         <div className="space-y-2">
           <label
             htmlFor="target-role"
-            className="text-sm font-medium text-zinc-300"
+            className="text-sm font-medium text-neutral-300"
           >
             Target Role
           </label>
@@ -42,26 +42,26 @@ export function RoastControls({
             value={targetRole}
             disabled={isLoading}
             onChange={(event) => onTargetRoleChange(event.target.value)}
-            placeholder="Contoh: Frontend Developer"
-            className="border-zinc-800 bg-black/40 text-zinc-100 placeholder:text-zinc-600"
+            placeholder="Example: Frontend Developer"
+            className="rounded-lg border-white/10 bg-black/35 text-neutral-100 placeholder:text-neutral-600"
           />
         </div>
 
         <div className="space-y-2">
           <label
             htmlFor="target-company"
-            className="text-sm font-medium text-zinc-300"
+            className="text-sm font-medium text-neutral-300"
           >
             Target Company
-            <span className="ml-1 text-zinc-500">(optional)</span>
+            <span className="ml-1 text-neutral-500">(optional)</span>
           </label>
           <Input
             id="target-company"
             value={targetCompany}
             disabled={isLoading}
             onChange={(event) => onTargetCompanyChange(event.target.value)}
-            placeholder="Contoh: Tokopedia, BUMN, Bank Mandiri"
-            className="border-zinc-800 bg-black/40 text-zinc-100 placeholder:text-zinc-600"
+            placeholder="Example: Tokopedia, BUMN, Bank Mandiri"
+            className="rounded-lg border-white/10 bg-black/35 text-neutral-100 placeholder:text-neutral-600"
           />
         </div>
       </div>
@@ -71,12 +71,12 @@ export function RoastControls({
         size="lg"
         disabled={isSubmitDisabled}
         onClick={() => void onSubmit()}
-        className="w-full"
+        className="w-full bg-emerald-300 text-neutral-950 hover:bg-emerald-200"
       >
         {isLoading ? (
           <>
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            HRD sedang membaca CV...
+            HR is reading the CV...
           </>
         ) : (
           <>
@@ -86,9 +86,9 @@ export function RoastControls({
         )}
       </Button>
 
-      <p className="text-xs leading-5 text-zinc-500">
-        Target role penting karena persona akan menilai apakah isi CV kamu cocok
-        dengan posisi yang dituju, bukan cuma menilai CV secara umum.
+      <p className="text-xs leading-5 text-neutral-500">
+        The target role anchors the critique to the job, not just generic CV
+        polish.
       </p>
     </div>
   );

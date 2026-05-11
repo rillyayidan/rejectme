@@ -33,12 +33,12 @@ export function DiffOverlay({
   }
 
   return (
-    <div className="rounded-2xl border border-purple-500/30 bg-purple-500/10 p-4">
+    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-purple-100">AI Rewrite Suggestion</p>
-          <p className="mt-1 text-sm leading-6 text-purple-100/70">
-            Pilih versi rewrite yang mau kamu apply ke CV.
+          <p className="font-semibold text-emerald-100">AI Rewrite Suggestion</p>
+          <p className="mt-1 text-sm leading-6 text-emerald-100/70">
+            Pick the rewrite version to apply to the CV.
           </p>
         </div>
 
@@ -49,30 +49,30 @@ export function DiffOverlay({
       </div>
 
       <div className="space-y-4">
-        <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3">
+        <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
           <p className="mb-1 text-xs font-medium uppercase tracking-wide text-red-200/70">
             Original
           </p>
           <p className="text-sm leading-6 text-red-100">{originalText}</p>
         </div>
 
-        <div className="rounded-xl border border-zinc-700 bg-zinc-950/70 p-3">
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-zinc-500">
+        <div className="rounded-lg border border-white/10 bg-black/30 p-3">
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-neutral-500">
             Critique reason
           </p>
-          <p className="text-sm leading-6 text-zinc-400">{critiqueReason}</p>
+          <p className="text-sm leading-6 text-neutral-400">{critiqueReason}</p>
         </div>
 
         {isLoading ? (
-          <div className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-black/30 p-4 text-sm text-zinc-400">
+          <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/30 p-4 text-sm text-neutral-400">
             <Loader2 className="h-4 w-4 animate-spin" />
-            AI sedang menulis ulang bullet...
+            Writing rewrite options...
           </div>
         ) : null}
 
         {result ? (
           <>
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-emerald-200/70">
                 Minimal Fix
               </p>
@@ -102,11 +102,11 @@ export function DiffOverlay({
               </div>
             </div>
 
-            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-blue-200/70">
+            <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-cyan-200/70">
                 Ideal Version
               </p>
-              <p className="text-sm leading-6 text-blue-100">
+              <p className="text-sm leading-6 text-cyan-100">
                 {result.ideal}
               </p>
 

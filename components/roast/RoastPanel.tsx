@@ -25,9 +25,9 @@ export function RoastPanel({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/80 p-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 rounded-lg border border-white/10 bg-black/25 p-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
-          <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-2 text-orange-200">
+          <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 p-2 text-orange-200">
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
@@ -36,15 +36,15 @@ export function RoastPanel({
           </div>
 
           <div>
-            <p className="font-medium text-zinc-100">
+            <p className="font-medium text-neutral-100">
               {isLoading
-                ? `${personaName} sedang membaca CV...`
+                ? `${personaName} is reading the CV...`
                 : hasRoast
-                  ? `Roast dari ${personaName}`
-                  : "Belum ada roast"}
+                  ? `Roast from ${personaName}`
+                  : "No roast yet"}
             </p>
-            <p className="text-sm text-zinc-500">
-              Hasil akan muncul secara streaming saat AI mulai merespons.
+            <p className="text-sm text-neutral-500">
+              Feedback streams in as the model responds.
             </p>
           </div>
         </div>
@@ -61,27 +61,26 @@ export function RoastPanel({
         </Button>
       </div>
 
-      <div className="min-h-[360px] whitespace-pre-wrap rounded-2xl border border-zinc-800 bg-black/40 p-5 text-sm leading-7 text-zinc-200">
+      <div className="min-h-[360px] whitespace-pre-wrap rounded-lg border border-white/10 bg-black/35 p-5 text-sm leading-7 text-neutral-200">
         {hasRoast ? (
           roast
         ) : (
           <div className="flex min-h-[300px] flex-col items-center justify-center text-center">
-            <div className="mb-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-zinc-500">
+            <div className="mb-4 rounded-lg border border-white/10 bg-white/5 p-4 text-neutral-500">
               <Flame className="h-8 w-8" />
             </div>
 
-            <p className="font-medium text-zinc-300">
-              Roast CV kamu akan muncul di sini.
+            <p className="font-medium text-neutral-300">
+              The CV roast will appear here.
             </p>
-            <p className="mt-2 max-w-md text-sm leading-6 text-zinc-500">
-              Pilih persona, isi target role, lalu klik tombol roast. Feedback
-              akan ditulis berdasarkan standar persona yang dipilih.
+            <p className="mt-2 max-w-md text-sm leading-6 text-neutral-500">
+              Choose a persona, add the target role, then run the critique.
             </p>
           </div>
         )}
 
         {isLoading && hasRoast ? (
-          <span className="ml-1 inline-block h-4 w-2 animate-pulse rounded-sm bg-purple-300 align-middle" />
+          <span className="ml-1 inline-block h-4 w-2 animate-pulse rounded-sm bg-emerald-300 align-middle" />
         ) : null}
       </div>
     </div>

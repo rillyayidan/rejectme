@@ -20,7 +20,7 @@ const PERSONA_OPTIONS: PersonaOption[] = [
     label: "BUMN Mode",
     description:
       "Formal, administratif, sangat peduli kelengkapan, IPK, struktur CV, dan stabilitas karier.",
-    accent: "from-blue-500/20 to-cyan-500/10 border-blue-400/40",
+    accent: "border-cyan-300/45 bg-cyan-500/10",
   },
   {
     id: "startup",
@@ -28,7 +28,7 @@ const PERSONA_OPTIONS: PersonaOption[] = [
     label: "Startup Mode",
     description:
       "Direct, cepat, fokus pada impact, metric, ownership, portfolio, dan bukti pernah ship sesuatu.",
-    accent: "from-purple-500/20 to-pink-500/10 border-purple-400/40",
+    accent: "border-amber-300/45 bg-amber-500/10",
   },
   {
     id: "corporate",
@@ -36,7 +36,7 @@ const PERSONA_OPTIONS: PersonaOption[] = [
     label: "Corporate Mode",
     description:
       "Profesional, sistematis, fokus ATS, konsistensi format, role match, dan bahasa yang rapi.",
-    accent: "from-emerald-500/20 to-teal-500/10 border-emerald-400/40",
+    accent: "border-emerald-300/45 bg-emerald-500/10",
   },
 ];
 
@@ -63,34 +63,34 @@ export function PersonaPicker({
             disabled={disabled}
             onClick={() => onChange(persona.id)}
             className={[
-              "group relative overflow-hidden rounded-2xl border p-4 text-left transition",
+              "group relative overflow-hidden rounded-lg border p-4 text-left transition",
               "disabled:cursor-not-allowed disabled:opacity-60",
               isSelected
-                ? `bg-gradient-to-br ${persona.accent}`
-                : "border-zinc-800 bg-zinc-950/70 hover:border-zinc-600 hover:bg-zinc-900",
+                ? persona.accent
+                : "border-white/10 bg-black/25 hover:border-white/20 hover:bg-white/5",
             ].join(" ")}
           >
             <div className="relative z-10 flex items-start justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-semibold text-zinc-50">
+                  <h3 className="font-semibold text-neutral-50">
                     {persona.name}
                   </h3>
 
-                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-zinc-300">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-neutral-300">
                     {persona.label}
                   </span>
                 </div>
 
-                <p className="mt-2 text-sm leading-6 text-zinc-400">
+                <p className="mt-2 text-sm leading-6 text-neutral-400">
                   {persona.description}
                 </p>
               </div>
 
               {isSelected ? (
-                <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-purple-200" />
+                <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-emerald-200" />
               ) : (
-                <div className="mt-1 h-5 w-5 shrink-0 rounded-full border border-zinc-700" />
+                <div className="mt-1 h-5 w-5 shrink-0 rounded-full border border-white/20" />
               )}
             </div>
           </button>

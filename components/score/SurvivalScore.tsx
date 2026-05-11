@@ -1,12 +1,10 @@
-// components/score/SurvivalScore.tsx
-
 "use client";
 
 import {
-  Loader2,
-  Trophy,
   AlertTriangle,
   CheckCircle2,
+  Loader2,
+  Trophy,
   XCircle,
 } from "lucide-react";
 
@@ -55,9 +53,9 @@ const DEFAULT_BREAKDOWN: SurvivalScoreData["breakdown"] = {
 
 const DEFAULT_TIER: ScoreTier = {
   label: "Unknown",
-  emoji: "🧪",
+  emoji: "",
   color: "zinc",
-  message: "Score berhasil dibuat, tapi beberapa detail belum tersedia.",
+  message: "Score was created, but some details are missing.",
 };
 
 function getScoreIcon(score: number) {
@@ -68,10 +66,22 @@ function getScoreIcon(score: number) {
 }
 
 function getScoreTone(score: number) {
-  if (score >= 85) return "border-emerald-400/40 bg-emerald-500/10 text-emerald-100";
-  if (score >= 70) return "border-green-400/40 bg-green-500/10 text-green-100";
-  if (score >= 50) return "border-yellow-400/40 bg-yellow-500/10 text-yellow-100";
-  if (score >= 30) return "border-orange-400/40 bg-orange-500/10 text-orange-100";
+  if (score >= 85) {
+    return "border-emerald-400/40 bg-emerald-500/10 text-emerald-100";
+  }
+
+  if (score >= 70) {
+    return "border-lime-400/40 bg-lime-500/10 text-lime-100";
+  }
+
+  if (score >= 50) {
+    return "border-yellow-400/40 bg-yellow-500/10 text-yellow-100";
+  }
+
+  if (score >= 30) {
+    return "border-orange-400/40 bg-orange-500/10 text-orange-100";
+  }
+
   return "border-red-400/40 bg-red-500/10 text-red-100";
 }
 
@@ -89,7 +99,7 @@ function normalizeScore(score: SurvivalScoreData) {
   return {
     total: clampScore(score.total),
     breakdown,
-    verdict: score.verdict || "Belum ada verdict.",
+    verdict: score.verdict || "No verdict yet.",
     topIssues: Array.isArray(score.top_issues) ? score.top_issues : [],
     quickWins: Array.isArray(score.quick_wins) ? score.quick_wins : [],
     tier: score.tier ?? DEFAULT_TIER,
@@ -99,11 +109,13 @@ function normalizeScore(score: SurvivalScoreData) {
 export function SurvivalScore({ score, isLoading = false }: SurvivalScoreProps) {
   if (isLoading) {
     return (
-      <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-zinc-800 bg-black/40 p-6 text-center">
-        <Loader2 className="mb-4 h-8 w-8 animate-spin text-purple-200" />
-        <p className="font-medium text-zinc-100">Menghitung Survival Score...</p>
-        <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-500">
-          AI sedang mengecek ATS, role match, clarity, impact proof, dan red flags.
+      <div className="flex min-h-[360px] flex-col items-center justify-center rounded-lg border border-white/10 bg-black/35 p-6 text-center">
+        <Loader2 className="mb-4 h-8 w-8 animate-spin text-emerald-200" />
+        <p className="font-medium text-neutral-100">
+          Calculating Survival Score...
+        </p>
+        <p className="mt-2 max-w-sm text-sm leading-6 text-neutral-500">
+          Checking ATS, role match, clarity, impact proof, and red flags.
         </p>
       </div>
     );
@@ -111,13 +123,13 @@ export function SurvivalScore({ score, isLoading = false }: SurvivalScoreProps) 
 
   if (!score) {
     return (
-      <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-zinc-800 bg-black/40 p-6 text-center">
-        <div className="mb-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-zinc-500">
+      <div className="flex min-h-[360px] flex-col items-center justify-center rounded-lg border border-white/10 bg-black/35 p-6 text-center">
+        <div className="mb-4 rounded-lg border border-white/10 bg-white/5 p-4 text-neutral-500">
           <Trophy className="h-8 w-8" />
         </div>
-        <p className="font-medium text-zinc-300">Belum ada score.</p>
-        <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-500">
-          Survival Score akan muncul setelah CV selesai di-roast.
+        <p className="font-medium text-neutral-300">No score yet.</p>
+        <p className="mt-2 max-w-sm text-sm leading-6 text-neutral-500">
+          The score appears after the CV roast finishes.
         </p>
       </div>
     );
@@ -128,35 +140,35 @@ export function SurvivalScore({ score, isLoading = false }: SurvivalScoreProps) 
 
   return (
     <div className="space-y-4">
-      <div className={`rounded-2xl border p-5 ${tone}`}>
+      <div className={`rounded-lg border p-5 ${tone}`}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium opacity-80">Survival Score</p>
             <div className="mt-2 flex items-end gap-2">
-              <span className="text-6xl font-bold tracking-tight">
+              <span className="text-6xl font-bold tracking-normal">
                 {normalized.total}
               </span>
-              <span className="pb-2 text-lg font-semibold opacity-70">/100</span>
+              <span className="pb-2 text-lg font-semibold opacity-70">
+                /100
+              </span>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
+          <div className="rounded-lg border border-white/10 bg-white/10 p-3">
             {getScoreIcon(normalized.total)}
           </div>
         </div>
 
         <div className="mt-4">
-          <p className="text-lg font-semibold">
-            {normalized.tier.emoji} {normalized.tier.label}
-          </p>
+          <p className="text-lg font-semibold">{normalized.tier.label}</p>
           <p className="mt-1 text-sm leading-6 opacity-80">
             {normalized.tier.message}
           </p>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-        <p className="mb-3 text-sm font-semibold text-zinc-100">Breakdown</p>
+      <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+        <p className="mb-3 text-sm font-semibold text-neutral-100">Breakdown</p>
 
         <div className="space-y-3">
           {Object.entries(normalized.breakdown).map(([key, rawValue]) => {
@@ -168,13 +180,13 @@ export function SurvivalScore({ score, isLoading = false }: SurvivalScoreProps) 
             return (
               <div key={key} className="space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-zinc-400">{label}</span>
-                  <span className="font-medium text-zinc-100">{value}/100</span>
+                  <span className="text-neutral-400">{label}</span>
+                  <span className="font-medium text-neutral-100">{value}/100</span>
                 </div>
 
-                <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
+                <div className="h-2 overflow-hidden rounded-full bg-neutral-800">
                   <div
-                    className="h-full rounded-full bg-zinc-200 transition-all"
+                    className="h-full rounded-full bg-emerald-200 transition-all"
                     style={{ width: `${value}%` }}
                   />
                 </div>
@@ -184,15 +196,15 @@ export function SurvivalScore({ score, isLoading = false }: SurvivalScoreProps) 
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-        <p className="text-sm font-semibold text-zinc-100">Verdict</p>
-        <p className="mt-2 text-sm leading-6 text-zinc-400">
+      <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+        <p className="text-sm font-semibold text-neutral-100">Verdict</p>
+        <p className="mt-2 text-sm leading-6 text-neutral-400">
           {normalized.verdict}
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4">
+        <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4">
           <p className="text-sm font-semibold text-red-100">Top Issues</p>
 
           {normalized.topIssues.length > 0 ? (
@@ -203,12 +215,12 @@ export function SurvivalScore({ score, isLoading = false }: SurvivalScoreProps) 
             </ul>
           ) : (
             <p className="mt-3 text-sm leading-6 text-red-100/60">
-              Tidak ada top issues yang dikirim oleh AI.
+              No top issues were returned.
             </p>
           )}
         </div>
 
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
           <p className="text-sm font-semibold text-emerald-100">Quick Wins</p>
 
           {normalized.quickWins.length > 0 ? (
@@ -219,7 +231,7 @@ export function SurvivalScore({ score, isLoading = false }: SurvivalScoreProps) 
             </ul>
           ) : (
             <p className="mt-3 text-sm leading-6 text-emerald-100/60">
-              Tidak ada quick wins yang dikirim oleh AI.
+              No quick wins were returned.
             </p>
           )}
         </div>

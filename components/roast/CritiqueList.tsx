@@ -22,14 +22,13 @@ export function CritiqueList({
 }: CritiqueListProps) {
   if (isLoading) {
     return (
-      <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-zinc-800 bg-black/30 p-6 text-center">
-        <Loader2 className="mb-4 h-8 w-8 animate-spin text-purple-200" />
-        <p className="font-medium text-zinc-100">
-          Membedah kritik satu per satu...
+      <div className="flex min-h-[260px] flex-col items-center justify-center rounded-lg border border-white/10 bg-black/25 p-6 text-center">
+        <Loader2 className="mb-4 h-8 w-8 animate-spin text-emerald-200" />
+        <p className="font-medium text-neutral-100">
+          Breaking the critique into action items...
         </p>
-        <p className="mt-2 max-w-md text-sm leading-6 text-zinc-500">
-          AI sedang mengubah roast panjang menjadi daftar critique item yang bisa
-          ditindaklanjuti.
+        <p className="mt-2 max-w-md text-sm leading-6 text-neutral-500">
+          The long roast is being converted into fixable resume issues.
         </p>
       </div>
     );
@@ -37,14 +36,14 @@ export function CritiqueList({
 
   if (!structuredRoast) {
     return (
-      <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-zinc-800 bg-black/30 p-6 text-center">
-        <div className="mb-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-zinc-500">
+      <div className="flex min-h-[260px] flex-col items-center justify-center rounded-lg border border-white/10 bg-black/25 p-6 text-center">
+        <div className="mb-4 rounded-lg border border-white/10 bg-white/5 p-4 text-neutral-500">
           <MessageSquareWarning className="h-8 w-8" />
         </div>
 
-        <p className="font-medium text-zinc-300">Belum ada critique items.</p>
-        <p className="mt-2 max-w-md text-sm leading-6 text-zinc-500">
-          Setelah roast selesai, daftar kritik spesifik akan muncul di sini.
+        <p className="font-medium text-neutral-300">No critique items yet.</p>
+        <p className="mt-2 max-w-md text-sm leading-6 text-neutral-500">
+          Specific resume issues appear after the roast finishes.
         </p>
       </div>
     );
@@ -64,22 +63,22 @@ export function CritiqueList({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-        <p className="text-sm font-semibold text-zinc-100">
+      <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+        <p className="text-sm font-semibold text-neutral-100">
           Structured Review
         </p>
 
-        <p className="mt-2 text-sm leading-6 text-zinc-400">
+        <p className="mt-2 text-sm leading-6 text-neutral-400">
           {structuredRoast.overall_impression ||
-            "AI sudah membuat structured review, tapi overall impression tidak tersedia."}
+            "The structured review was created, but no overall impression was returned."}
         </p>
 
-        <div className="mt-4 rounded-xl border border-zinc-800 bg-black/30 p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+        <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
             Verdict
           </p>
-          <p className="mt-1 text-sm leading-6 text-zinc-300">
-            {structuredRoast.verdict || "Belum ada verdict."}
+          <p className="mt-1 text-sm leading-6 text-neutral-300">
+            {structuredRoast.verdict || "No verdict yet."}
           </p>
         </div>
       </div>
@@ -93,15 +92,15 @@ export function CritiqueList({
           />
         ))
       ) : (
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 text-sm text-emerald-100/80">
-          Semua critique item sudah dibereskan atau tidak ada kritik fixable yang tersisa.
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-5 text-sm text-emerald-100/80">
+          All fixable critique items are resolved.
         </div>
       )}
 
       {strengths.length > 0 ? (
-        <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4">
-          <p className="text-sm font-semibold text-blue-100">Strengths</p>
-          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-blue-100/75">
+        <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-4">
+          <p className="text-sm font-semibold text-cyan-100">Strengths</p>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-cyan-100/75">
             {strengths.map((item) => (
               <li key={item}>{item}</li>
             ))}
@@ -110,7 +109,7 @@ export function CritiqueList({
       ) : null}
 
       {quickWins.length > 0 ? (
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
           <p className="text-sm font-semibold text-emerald-100">Quick Wins</p>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-emerald-100/75">
             {quickWins.map((item) => (

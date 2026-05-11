@@ -16,7 +16,7 @@ export function LoginButton() {
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
       console.error("[LoginButton] Sign in error:", error);
-      alert("Gagal login dengan Google. Coba lagi.");
+      alert("Could not sign in with Google. Try again.");
     }
   }
 
@@ -25,7 +25,7 @@ export function LoginButton() {
       await signOut(auth);
     } catch (error) {
       console.error("[LoginButton] Sign out error:", error);
-      alert("Gagal logout. Coba lagi.");
+      alert("Could not sign out. Try again.");
     }
   }
 
@@ -41,11 +41,11 @@ export function LoginButton() {
   if (user) {
     return (
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm">
-          <p className="font-medium text-zinc-100">
+        <div className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm">
+          <p className="font-medium text-neutral-100">
             {user.displayName ?? "Logged in"}
           </p>
-          <p className="text-xs text-zinc-500">{user.email}</p>
+          <p className="text-xs text-neutral-400">{user.email}</p>
         </div>
 
         <Button type="button" variant="secondary" onClick={handleSignOut}>
@@ -57,7 +57,11 @@ export function LoginButton() {
   }
 
   return (
-    <Button type="button" onClick={handleSignIn}>
+    <Button
+      type="button"
+      onClick={handleSignIn}
+      className="bg-emerald-300 text-neutral-950 hover:bg-emerald-200"
+    >
       <LogIn className="mr-2 h-4 w-4" />
       Login with Google
     </Button>

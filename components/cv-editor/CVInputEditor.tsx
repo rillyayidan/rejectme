@@ -1,5 +1,3 @@
-// components/cv-editor/CVInputEditor.tsx
-
 "use client";
 
 import { FileText, RotateCcw } from "lucide-react";
@@ -17,7 +15,7 @@ export function CVInputEditor({
   value,
   onChange,
   disabled = false,
-  placeholder = "Paste isi CV kamu di sini...",
+  placeholder = "Paste your CV text here...",
 }: CVInputEditorProps) {
   const characterCount = value.length;
   const wordCount = value.trim()
@@ -30,16 +28,16 @@ export function CVInputEditor({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/80 p-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 rounded-lg border border-white/10 bg-black/25 p-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
-          <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-2 text-zinc-300">
+          <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-neutral-300">
             <FileText className="h-5 w-5" />
           </div>
 
           <div>
-            <p className="font-medium text-zinc-100">CV Text Editor</p>
-            <p className="text-sm text-zinc-500">
-              {wordCount} words · {characterCount} characters
+            <p className="font-medium text-neutral-100">CV Text Editor</p>
+            <p className="text-sm text-neutral-500">
+              {wordCount} words / {characterCount} characters
             </p>
           </div>
         </div>
@@ -61,12 +59,12 @@ export function CVInputEditor({
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="min-h-[320px] resize-y border-zinc-800 bg-black/40 text-sm leading-7 text-zinc-100 placeholder:text-zinc-600"
+        className="min-h-[340px] resize-y rounded-lg border-white/10 bg-black/35 text-sm leading-7 text-neutral-100 placeholder:text-neutral-600"
       />
 
-      <p className="text-xs leading-5 text-zinc-500">
-        Tip: kalau hasil PDF berantakan, rapikan bagian pengalaman kerja dan bullet
-        achievement dulu. Roast akan lebih akurat kalau CV text-nya bersih.
+      <p className="text-xs leading-5 text-neutral-500">
+        Clean up work experience and achievement bullets before roasting. The
+        review is sharper when the extracted CV text is tidy.
       </p>
     </div>
   );

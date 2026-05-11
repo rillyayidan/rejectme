@@ -1,38 +1,46 @@
-// app/page.tsx
-
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  BriefcaseBusiness,
+  FileText,
+  History,
+  MessageSquareWarning,
+  ShieldCheck,
+  Sparkles,
+  Trophy,
+  UserRoundCheck,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { parsePdfToText } from "@/lib/pdf-parser";
-import type { PersonaId } from "@/lib/personas";
-import { CVUploadBox } from "@/components/upload/CVUploadBox";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CVInputEditor } from "@/components/cv-editor/CVInputEditor";
+import {
+  DiffOverlay,
+  type FixResult,
+} from "@/components/cv-editor/DiffOverlay";
+import { LoginButton } from "@/components/auth/LoginButton";
+import { SessionHistory } from "@/components/history/SessionHistory";
+import { CritiqueList } from "@/components/roast/CritiqueList";
 import { PersonaPicker } from "@/components/roast/PersonaPicker";
+import { RoastControls } from "@/components/roast/RoastControls";
 import { RoastPanel } from "@/components/roast/RoastPanel";
 import {
   SurvivalScore,
   type SurvivalScoreData,
 } from "@/components/score/SurvivalScore";
-import { CVInputEditor } from "@/components/cv-editor/CVInputEditor";
-import { RoastControls } from "@/components/roast/RoastControls";
-import { LoginButton } from "@/components/auth/LoginButton";
-import { useCurrentUser } from "@/firebase/use-current-user";
+import { CVUploadBox } from "@/components/upload/CVUploadBox";
 import {
   createRoastSession,
   updateRoastSession,
   type RoastSession,
 } from "@/firebase/sessions";
-import { SessionHistory } from "@/components/history/SessionHistory";
-import { CritiqueList } from "@/components/roast/CritiqueList";
+import { useCurrentUser } from "@/firebase/use-current-user";
 import type {
   CritiqueItem,
   StructuredRoastResult,
 } from "@/lib/critique";
-import {
-  DiffOverlay,
-  type FixResult,
-} from "@/components/cv-editor/DiffOverlay";
+import { parsePdfToText } from "@/lib/pdf-parser";
+import type { PersonaId } from "@/lib/personas";
 
 export default function HomePage() {
   const [cvText, setCvText] = useState("");
@@ -70,6 +78,9 @@ export default function HomePage() {
         ? "Bu Diana"
         : "Kak Rara";
 
+  const hasInput = cvText.trim().length >= 50;
+  const canStart = hasInput && targetRole.trim().length >= 2 && !!user;
+
   async function handlePdfUpload(file: File) {
     setError("");
     setPdfError("");
@@ -81,7 +92,7 @@ export default function HomePage() {
       setCvText(text);
     } catch (err) {
       console.error(err);
-      setPdfError("Gagal membaca PDF. Coba paste isi CV secara manual.");
+      setPdfError("Could not read the PDF. Paste the CV text manually instead.");
     } finally {
       setIsParsingPdf(false);
     }
@@ -107,7 +118,7 @@ export default function HomePage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error ?? "Gagal membuat structured roast.");
+        throw new Error(data.error ?? "Failed to create structured roast.");
       }
 
       const structuredData = data as StructuredRoastResult;
@@ -119,7 +130,7 @@ export default function HomePage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Gagal membuat structured roast."
+          : "Failed to create structured roast."
       );
       return null;
     } finally {
@@ -150,13 +161,13 @@ export default function HomePage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error ?? "Gagal membuat rewrite.");
+        throw new Error(data.error ?? "Failed to create rewrite.");
       }
 
       setFixResult(data as FixResult);
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "Gagal membuat rewrite.");
+      setError(err instanceof Error ? err.message : "Failed to create rewrite.");
     } finally {
       setIsFixing(false);
     }
@@ -170,13 +181,13 @@ export default function HomePage() {
     const original = selectedCritique.quoted_text;
 
     if (!original.trim()) {
-      setError("Tidak ada text original untuk diganti.");
+      setError("No original text was available to replace.");
       return;
     }
 
     if (!cvText.includes(original)) {
       setError(
-        "Text original tidak ditemukan persis di CV. Coba copy rewrite dan paste manual."
+        "The original text was not found exactly in the CV. Copy the rewrite and paste it manually."
       );
       return;
     }
@@ -244,7 +255,7 @@ export default function HomePage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error ?? "Gagal menghitung score.");
+        throw new Error(data.error ?? "Failed to calculate score.");
       }
 
       const scoreData = data as SurvivalScoreData;
@@ -253,7 +264,7 @@ export default function HomePage() {
       return scoreData;
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "Gagal menghitung score.");
+      setError(err instanceof Error ? err.message : "Failed to calculate score.");
       return null;
     } finally {
       setIsScoring(false);
@@ -268,22 +279,22 @@ export default function HomePage() {
     setStructuredRoast(null);
 
     if (cvText.trim().length < 50) {
-      setError("CV terlalu pendek. Upload PDF atau paste isi CV dulu.");
+      setError("CV is too short. Upload a PDF or paste the CV text first.");
       return;
     }
 
     if (targetRole.trim().length < 2) {
-      setError("Target role wajib diisi.");
+      setError("Target role is required.");
       return;
     }
 
     if (isAuthLoading) {
-      setError("Auth masih loading. Tunggu sebentar lalu coba lagi.");
+      setError("Auth is still loading. Wait a moment and try again.");
       return;
     }
 
     if (!user) {
-      setError("Login dengan Google dulu sebelum roast CV.");
+      setError("Login with Google before roasting a CV.");
       return;
     }
 
@@ -318,7 +329,7 @@ export default function HomePage() {
 
       if (!response.ok || !response.body) {
         const data = await response.json().catch(() => null);
-        throw new Error(data?.error ?? "Gagal menjalankan roast.");
+        throw new Error(data?.error ?? "Failed to run roast.");
       }
 
       const reader = response.body.getReader();
@@ -338,7 +349,6 @@ export default function HomePage() {
 
       const finalScore = await handleScore();
 
-      // Kasih jeda kecil supaya Vertex AI tidak kena burst request.
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       const finalStructuredRoast = await handleStructuredRoast();
@@ -354,7 +364,7 @@ export default function HomePage() {
     } catch (err) {
       console.error(err);
 
-      const message = err instanceof Error ? err.message : "Terjadi error.";
+      const message = err instanceof Error ? err.message : "Something went wrong.";
       setError(message);
 
       if (user && sessionId) {
@@ -364,7 +374,10 @@ export default function HomePage() {
           status: "failed",
           errorMessage: message,
         }).catch((updateError) => {
-          console.error("[handleRoast] Failed to mark session as failed:", updateError);
+          console.error(
+            "[handleRoast] Failed to mark session as failed:",
+            updateError
+          );
         });
       }
     } finally {
@@ -389,34 +402,93 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-50">
-      <section className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8">
-        <header className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-3">
-            <Badge variant="secondary">GDG JuaraVibeCoding · Live Build</Badge>
+    <main className="min-h-screen bg-neutral-950 text-neutral-50">
+      <section className="border-b border-white/10 bg-[linear-gradient(135deg,#111111_0%,#171717_42%,#10251f_100%)]">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+          <header className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl space-y-4">
+              <Badge
+                variant="secondary"
+                className="border-white/10 bg-white/10 text-neutral-100"
+              >
+                GDG JuaraVibeCoding / Live Build
+              </Badge>
 
-            <h1 className="text-4xl font-bold tracking-tight md:text-6xl">
-              RejectMe
-            </h1>
+              <div className="space-y-3">
+                <h1 className="text-4xl font-semibold leading-tight tracking-normal text-white md:text-6xl">
+                  RejectMe
+                </h1>
 
-            <p className="max-w-2xl text-zinc-400">
-              Upload CV, pilih persona HRD, lalu biarkan AI me-roast CV kamu
-              sebelum HRD asli melakukannya.
-            </p>
+                <p className="max-w-2xl text-base leading-7 text-neutral-300">
+                  Upload CV, pick an HR persona, and turn vague resume feedback
+                  into specific fixes you can apply.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-start lg:justify-end">
+              <LoginButton />
+            </div>
+          </header>
+
+          <div className="grid gap-3 border-t border-white/10 pt-5 sm:grid-cols-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg border border-white/10 bg-white/10 p-2 text-emerald-200">
+                <FileText className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">Input</p>
+                <p className="text-xs text-neutral-400">
+                  {hasInput ? "CV text ready" : "Upload or paste CV"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg border border-white/10 bg-white/10 p-2 text-cyan-200">
+                <BriefcaseBusiness className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">Target</p>
+                <p className="text-xs text-neutral-400">
+                  {targetRole.trim() || "Role required"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg border border-white/10 bg-white/10 p-2 text-amber-200">
+                <ShieldCheck className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">Status</p>
+                <p className="text-xs text-neutral-400">
+                  {canStart ? "Ready to roast" : "Needs CV, role, and login"}
+                </p>
+              </div>
+            </div>
           </div>
+        </div>
+      </section>
 
-          <div className="flex justify-start md:justify-end">
-            <LoginButton />
-          </div>
-        </header>
-
-        <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-          <Card className="border-zinc-800 bg-zinc-900 text-zinc-50">
-            <CardHeader>
-              <CardTitle>1. CV Input</CardTitle>
+      <section className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+          <Card className="rounded-lg border-white/10 bg-neutral-900/80 text-neutral-50 shadow-2xl shadow-black/30">
+            <CardHeader className="border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-emerald-200">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle>CV Workspace</CardTitle>
+                  <p className="mt-1 text-sm text-neutral-400">
+                    Upload, clean up, and target the exact role.
+                  </p>
+                </div>
+              </div>
             </CardHeader>
 
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5 pt-1">
               <CVUploadBox
                 isLoading={isParsingPdf}
                 error={pdfError}
@@ -428,14 +500,14 @@ export default function HomePage() {
                 value={cvText}
                 onChange={setCvText}
                 disabled={isRoasting}
-                placeholder="Atau paste isi CV kamu di sini..."
+                placeholder="Paste your CV text here..."
               />
 
               <RoastControls
                 targetRole={targetRole}
                 targetCompany={targetCompany}
                 isLoading={isRoasting}
-                disabled={cvText.trim().length < 50}
+                disabled={!hasInput}
                 onTargetRoleChange={setTargetRole}
                 onTargetCompanyChange={setTargetCompany}
                 onSubmit={handleRoast}
@@ -443,51 +515,85 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          <Card className="border-zinc-800 bg-zinc-900 text-zinc-50">
-            <CardHeader>
-              <CardTitle>2. Pilih Persona HRD</CardTitle>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <PersonaPicker
-                value={personaId}
-                onChange={setPersonaId}
-                disabled={isRoasting}
-              />
-
-              {error ? (
-                <p className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
-                  {error}
-                </p>
-              ) : null}
-
-              {currentSessionId ? (
-                <p className="rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-xs text-zinc-400">
-                  Session saved: {currentSessionId}
-                </p>
-              ) : null}
-
-              <div className="border-t border-zinc-800 pt-4">
-                <div className="mb-3">
-                  <h3 className="font-semibold text-zinc-100">Roast History</h3>
-                  <p className="text-sm text-zinc-500">
-                    Klik session lama untuk load hasil sebelumnya.
-                  </p>
+          <aside className="space-y-6">
+            <Card className="rounded-lg border-white/10 bg-neutral-900/80 text-neutral-50 shadow-2xl shadow-black/30">
+              <CardHeader className="border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-cyan-200">
+                    <UserRoundCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle>HR Persona</CardTitle>
+                    <p className="mt-1 text-sm text-neutral-400">
+                      Choose the lens for the critique.
+                    </p>
+                  </div>
                 </div>
+              </CardHeader>
 
-                <SessionHistory user={user} onSelectSession={handleSelectSession} />
-              </div>
-            </CardContent>
-          </Card>
+              <CardContent className="space-y-4 pt-1">
+                <PersonaPicker
+                  value={personaId}
+                  onChange={setPersonaId}
+                  disabled={isRoasting}
+                />
+
+                {error ? (
+                  <p className="rounded-lg border border-red-400/40 bg-red-500/10 p-3 text-sm text-red-100">
+                    {error}
+                  </p>
+                ) : null}
+
+                {currentSessionId ? (
+                  <p className="rounded-lg border border-white/10 bg-black/30 p-3 text-xs text-neutral-400">
+                    Session saved: {currentSessionId}
+                  </p>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-lg border-white/10 bg-neutral-900/80 text-neutral-50 shadow-2xl shadow-black/30">
+              <CardHeader className="border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-amber-200">
+                    <History className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle>Roast History</CardTitle>
+                    <p className="mt-1 text-sm text-neutral-400">
+                      Reload previous CV reviews.
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="pt-1">
+                <SessionHistory
+                  user={user}
+                  onSelectSession={handleSelectSession}
+                />
+              </CardContent>
+            </Card>
+          </aside>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <Card className="border-zinc-800 bg-zinc-900 text-zinc-50">
-            <CardHeader>
-              <CardTitle>3. Roast Result</CardTitle>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
+          <Card className="rounded-lg border-white/10 bg-neutral-900/80 text-neutral-50 shadow-2xl shadow-black/30">
+            <CardHeader className="border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-orange-200">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle>Roast Result</CardTitle>
+                  <p className="mt-1 text-sm text-neutral-400">
+                    Streaming feedback from {selectedPersonaName}.
+                  </p>
+                </div>
+              </div>
             </CardHeader>
 
-            <CardContent>
+            <CardContent className="pt-1">
               <RoastPanel
                 roast={roast}
                 isLoading={isRoasting}
@@ -496,23 +602,43 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          <Card className="border-zinc-800 bg-zinc-900 text-zinc-50">
-            <CardHeader>
-              <CardTitle>4. Survival Score</CardTitle>
+          <Card className="rounded-lg border-white/10 bg-neutral-900/80 text-neutral-50 shadow-2xl shadow-black/30">
+            <CardHeader className="border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-lime-200">
+                  <Trophy className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle>Survival Score</CardTitle>
+                  <p className="mt-1 text-sm text-neutral-400">
+                    ATS, clarity, impact, and role fit.
+                  </p>
+                </div>
+              </div>
             </CardHeader>
 
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-1">
               <SurvivalScore score={score} isLoading={isScoring} />
             </CardContent>
           </Card>
         </div>
 
-        <Card className="border-zinc-800 bg-zinc-900 text-zinc-50">
-          <CardHeader>
-            <CardTitle>5. Critique Items</CardTitle>
+        <Card className="rounded-lg border-white/10 bg-neutral-900/80 text-neutral-50 shadow-2xl shadow-black/30">
+          <CardHeader className="border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-red-200">
+                <MessageSquareWarning className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle>Critique Items</CardTitle>
+                <p className="mt-1 text-sm text-neutral-400">
+                  Specific problems and rewrite actions.
+                </p>
+              </div>
+            </div>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="pt-1">
             <CritiqueList
               structuredRoast={structuredRoast}
               isLoading={isStructuringRoast}

@@ -1,15 +1,13 @@
-// components/history/SessionHistory.tsx
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { Clock, FileText, Loader2 } from "lucide-react";
 import type { User } from "firebase/auth";
+import { Button } from "@/components/ui/button";
 import {
   subscribeToRoastSessions,
   type RoastSession,
 } from "@/firebase/sessions";
-import { Button } from "@/components/ui/button";
 
 interface SessionHistoryProps {
   user: User | null;
@@ -20,7 +18,7 @@ function formatDate(session: RoastSession) {
   const date = session.createdAt?.toDate?.();
 
   if (!date) {
-    return "Baru saja";
+    return "Just now";
   }
 
   return new Intl.DateTimeFormat("id-ID", {
@@ -42,14 +40,14 @@ function getStatusClass(status: RoastSession["status"]) {
   }
 
   if (status === "roasting") {
-    return "border-purple-500/30 bg-purple-500/10 text-purple-200";
+    return "border-amber-500/30 bg-amber-500/10 text-amber-200";
   }
 
   if (status === "failed") {
     return "border-red-500/30 bg-red-500/10 text-red-200";
   }
 
-  return "border-zinc-700 bg-zinc-900 text-zinc-300";
+  return "border-white/10 bg-white/5 text-neutral-300";
 }
 
 export function SessionHistory({ user, onSelectSession }: SessionHistoryProps) {
@@ -58,12 +56,12 @@ export function SessionHistory({ user, onSelectSession }: SessionHistoryProps) {
 
   useEffect(() => {
     if (!user) {
-      setSessions([]);
-      setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
+    queueMicrotask(() => {
+      setIsLoading(true);
+    });
 
     const unsubscribe = subscribeToRoastSessions(user, (nextSessions) => {
       setSessions(nextSessions);
@@ -75,15 +73,15 @@ export function SessionHistory({ user, onSelectSession }: SessionHistoryProps) {
 
   if (!user) {
     return (
-      <div className="rounded-2xl border border-zinc-800 bg-black/30 p-5 text-sm text-zinc-400">
-        Login untuk melihat history roast kamu.
+      <div className="rounded-lg border border-white/10 bg-black/25 p-5 text-sm text-neutral-400">
+        Login to view previous roasts.
       </div>
     );
   }
 
-  if (isLoading) {
+  if (user && isLoading) {
     return (
-      <div className="flex items-center gap-2 rounded-2xl border border-zinc-800 bg-black/30 p-5 text-sm text-zinc-400">
+      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/25 p-5 text-sm text-neutral-400">
         <Loader2 className="h-4 w-4 animate-spin" />
         Loading history...
       </div>
@@ -92,8 +90,8 @@ export function SessionHistory({ user, onSelectSession }: SessionHistoryProps) {
 
   if (sessions.length === 0) {
     return (
-      <div className="rounded-2xl border border-zinc-800 bg-black/30 p-5 text-sm text-zinc-400">
-        Belum ada history. Roast CV pertama kamu akan muncul di sini.
+      <div className="rounded-lg border border-white/10 bg-black/25 p-5 text-sm text-neutral-400">
+        No history yet. Your first roast will appear here.
       </div>
     );
   }
@@ -105,19 +103,19 @@ export function SessionHistory({ user, onSelectSession }: SessionHistoryProps) {
           key={session.id}
           type="button"
           onClick={() => onSelectSession(session)}
-          className="w-full rounded-2xl border border-zinc-800 bg-black/30 p-4 text-left transition hover:border-purple-500/50 hover:bg-purple-500/5"
+          className="w-full rounded-lg border border-white/10 bg-black/25 p-4 text-left transition hover:border-emerald-300/40 hover:bg-emerald-500/5"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 shrink-0 text-zinc-500" />
-                <p className="truncate font-medium text-zinc-100">
+                <FileText className="h-4 w-4 shrink-0 text-neutral-500" />
+                <p className="truncate font-medium text-neutral-100">
                   {session.targetRole || "Untitled role"}
                 </p>
               </div>
 
-              <p className="mt-1 truncate text-sm text-zinc-500">
-                {session.targetCompany || "No company"} · {session.personaId}
+              <p className="mt-1 truncate text-sm text-neutral-500">
+                {session.targetCompany || "No company"} / {session.personaId}
               </p>
             </div>
 
@@ -130,14 +128,14 @@ export function SessionHistory({ user, onSelectSession }: SessionHistoryProps) {
             </span>
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-3 text-xs text-zinc-500">
+          <div className="mt-3 flex items-center justify-between gap-3 text-xs text-neutral-500">
             <div className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
               {formatDate(session)}
             </div>
 
             {session.score ? (
-              <span className="font-medium text-zinc-300">
+              <span className="font-medium text-neutral-300">
                 Score {session.score.total}/100
               </span>
             ) : null}
