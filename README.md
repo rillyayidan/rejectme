@@ -29,7 +29,7 @@ Built for `GDG JuaraVibeCoding / Live Build`.
 - Tailwind CSS 4
 - shadcn/Radix UI components
 - Firebase Auth, Firestore, Storage, and Firebase Admin
-- Google Cloud Vertex AI Gemini
+- Google Gen AI SDK (`@google/genai`) using Google Cloud Vertex/Gemini
 - PDF.js via `pdfjs-dist`
 
 ## Requirements
@@ -154,5 +154,5 @@ http://localhost:3000/api/firebase-health
 - Set all environment variables in the hosting provider.
 - Make sure `NEXT_PUBLIC_*` Firebase values are available at build time.
 - Keep service account variables server-only.
-- Vertex AI and Firebase Admin routes use the Node.js runtime.
+- Google Gen AI and Firebase Admin routes use the Node.js runtime.
 - The streaming roast endpoint can take longer on cold starts, so use a platform that supports streaming responses and sufficient function duration.

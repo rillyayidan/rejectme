@@ -1,32 +1,44 @@
 // lib/gemini.ts
-// Vertex AI client untuk RejectMe — handles roast streaming, bullet fix, dan survival scoring.
+// Google Gen AI client untuk RejectMe - handles roast streaming, bullet fix, dan survival scoring.
 
-import { VertexAI, HarmCategory, HarmBlockThreshold } from "@google-cloud/vertexai";
+import {
+  GoogleGenAI,
+  HarmBlockThreshold,
+  HarmCategory,
+} from "@google/genai";
 import { jsonrepair } from "jsonrepair";
 import { buildSystemPrompt, getPersona, type PersonaId } from "./personas";
 import type { StructuredRoastResult } from "@/lib/critique";
 
 // ── Client setup ──────────────────────────────────────────────────────────────
 
-const vertex = new VertexAI({
+const ai = new GoogleGenAI({
+  enterprise: true,
   project: process.env.GOOGLE_CLOUD_PROJECT!,
   location: process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1",
+  apiVersion: "v1",
 });
 
-const model = vertex.getGenerativeModel({
-  model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
-  safetySettings: [
-    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-  ],
-  generationConfig: {
-    temperature: 0.8,
-    topP: 0.95,
-    maxOutputTokens: 2048,
+const modelName = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+
+const safetySettings = [
+  {
+    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
   },
-});
+  {
+    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -88,13 +100,20 @@ Ingat: setiap kritik harus menyebut bagian spesifik dari CV ini, bukan generik.`
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        const streamingResult = await model.generateContentStream({
-          systemInstruction: { role: "user", parts: [{ text: systemPrompt }] },
-          contents: [{ role: "user", parts: [{ text: userMessage }] }],
+        const streamingResult = await ai.models.generateContentStream({
+          model: modelName,
+          contents: userMessage,
+          config: {
+            systemInstruction: systemPrompt,
+            temperature: 0.8,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+            safetySettings,
+          },
         });
 
-        for await (const chunk of streamingResult.stream) {
-          const text = chunk.candidates?.[0]?.content?.parts?.[0]?.text;
+        for await (const chunk of streamingResult) {
+          const text = chunk.text;
           if (text) {
             controller.enqueue(encoder.encode(text));
           }
@@ -351,18 +370,20 @@ Aturan penting:
   try {
     const result = await withGeminiRetry(
       () =>
-        model.generateContent({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
+        ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
             temperature: 0.2,
             maxOutputTokens: 4096,
             responseMimeType: "application/json",
+            safetySettings,
           },
         }),
       "Structured roast"
     );
 
-    const raw = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+    const raw = result.text ?? "{}";
 
     let parsed: StructuredRoastResult;
 
@@ -424,11 +445,13 @@ Jangan tambahkan penjelasan lain. Hanya dua baris output.`;
   try {
     const result = await withGeminiRetry(
       () =>
-        model.generateContent({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
+        ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
             temperature: 0.4,
             maxOutputTokens: 384,
+            safetySettings,
           },
         }),
       "Fix bullet",
@@ -436,7 +459,7 @@ Jangan tambahkan penjelasan lain. Hanya dua baris output.`;
       18000
     );
 
-    return result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "Gagal generate rewrite.";
+    return result.text ?? "Gagal generate rewrite.";
   } catch (error) {
     console.error("[RejectMe] Fix bullet error:", error);
 
@@ -489,18 +512,20 @@ ${req.cvText}
   try {
     const result = await withGeminiRetry(
       () =>
-        model.generateContent({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
+        ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
             temperature: 0.1,
             maxOutputTokens: 2048,
             responseMimeType: "application/json",
+            safetySettings,
           },
         }),
       "Score calculation"
     );
 
-    const raw = result.response.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+    const raw = result.text ?? "{}";
 
     let parsed: SurvivalScoreResult;
 

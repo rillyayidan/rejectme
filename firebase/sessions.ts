@@ -24,6 +24,7 @@ interface CreateRoastSessionInput {
   personaId: PersonaId;
   targetRole: string;
   targetCompany?: string;
+  jobDescription?: string;
 }
 
 interface UpdateRoastSessionInput {
@@ -33,6 +34,8 @@ interface UpdateRoastSessionInput {
   roast?: string;
   score?: SurvivalScoreData | null;
   structuredRoast?: StructuredRoastResult | null;
+  jobDescription?: string;
+  fixedCritiqueIds?: string[];
   status?: "draft" | "roasting" | "completed" | "failed";
   errorMessage?: string;
 }
@@ -43,6 +46,7 @@ export async function createRoastSession({
   personaId,
   targetRole,
   targetCompany,
+  jobDescription,
 }: CreateRoastSessionInput) {
   const sessionsRef = collection(db, "users", user.uid, "sessions");
 
@@ -51,9 +55,11 @@ export async function createRoastSession({
     personaId,
     targetRole,
     targetCompany: targetCompany ?? "",
+    jobDescription: jobDescription ?? "",
     roast: "",
     score: null,
     structuredRoast: null,
+    fixedCritiqueIds: [],
     status: "roasting",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -69,6 +75,8 @@ export async function updateRoastSession({
   roast,
   score,
   structuredRoast,
+  jobDescription,
+  fixedCritiqueIds,
   status,
   errorMessage,
 }: UpdateRoastSessionInput) {
@@ -79,6 +87,8 @@ export async function updateRoastSession({
     ...(roast !== undefined ? { roast } : {}),
     ...(score !== undefined ? { score } : {}),
     ...(structuredRoast !== undefined ? { structuredRoast } : {}),
+    ...(jobDescription !== undefined ? { jobDescription } : {}),
+    ...(fixedCritiqueIds !== undefined ? { fixedCritiqueIds } : {}),
     ...(status !== undefined ? { status } : {}),
     ...(errorMessage !== undefined ? { errorMessage } : {}),
     updatedAt: serverTimestamp(),
@@ -91,9 +101,11 @@ export interface RoastSession {
   personaId: PersonaId;
   targetRole: string;
   targetCompany: string;
+  jobDescription: string;
   roast: string;
   score: SurvivalScoreData | null;
   structuredRoast: StructuredRoastResult | null;
+  fixedCritiqueIds: string[];
   status: "draft" | "roasting" | "completed" | "failed";
   errorMessage?: string;
   createdAt?: Timestamp;
@@ -122,9 +134,13 @@ export function subscribeToRoastSessions(
         personaId: data.personaId ?? "startup",
         targetRole: data.targetRole ?? "",
         targetCompany: data.targetCompany ?? "",
+        jobDescription: data.jobDescription ?? "",
         roast: data.roast ?? "",
         score: data.score ?? null,
         structuredRoast: data.structuredRoast ?? null,
+        fixedCritiqueIds: Array.isArray(data.fixedCritiqueIds)
+          ? data.fixedCritiqueIds
+          : [],
         status: data.status ?? "draft",
         errorMessage: data.errorMessage,
         createdAt: data.createdAt,
