@@ -8,12 +8,19 @@ import {
 } from "@/lib/gemini";
 import { type PersonaId } from "@/lib/personas";
 import type { StructuredRoastResult } from "@/lib/critique";
+import { isAuthFailure, requireFirebaseAuth } from "@/firebase/server-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await requireFirebaseAuth(req);
+
+    if (isAuthFailure(authResult)) {
+      return authResult.response;
+    }
+
     const body = await req.json();
 
     const { cvText, personaId, targetRole, targetCompany } = body as {

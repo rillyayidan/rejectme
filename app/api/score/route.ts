@@ -4,12 +4,19 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { calculateSurvivalScore, cleanCVText, type SurvivalScoreResult } from "@/lib/gemini";
 import { type PersonaId } from "@/lib/personas";
+import { isAuthFailure, requireFirebaseAuth } from "@/firebase/server-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await requireFirebaseAuth(req);
+
+    if (isAuthFailure(authResult)) {
+      return authResult.response;
+    }
+
     const body = await req.json();
     const { cvText, personaId, targetRole } = body as {
       cvText: string;

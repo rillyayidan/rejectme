@@ -2,12 +2,20 @@
 // Endpoint internal untuk mengecek Firebase Admin sudah connect atau belum.
 
 import { NextResponse } from "next/server";
+import { type NextRequest } from "next/server";
 import { adminDb } from "@/firebase/admin";
+import { isAuthFailure, requireFirebaseAuth } from "@/firebase/server-auth";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const authResult = await requireFirebaseAuth(req);
+
+    if (isAuthFailure(authResult)) {
+      return authResult.response;
+    }
+
     const testRef = adminDb.collection("_health").doc("firebase-admin");
 
     await testRef.set(

@@ -34,6 +34,7 @@ import {
   updateRoastSession,
   type RoastSession,
 } from "@/firebase/sessions";
+import { getAuthenticatedJsonHeaders } from "@/firebase/auth-headers";
 import { useCurrentUser } from "@/firebase/use-current-user";
 import type {
   CritiqueItem,
@@ -104,9 +105,7 @@ export default function HomePage() {
     try {
       const response = await fetch("/api/structured-roast", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await getAuthenticatedJsonHeaders(user),
         body: JSON.stringify({
           cvText,
           personaId,
@@ -147,9 +146,7 @@ export default function HomePage() {
     try {
       const response = await fetch("/api/fix", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await getAuthenticatedJsonHeaders(user),
         body: JSON.stringify({
           originalBullet: critique.quoted_text,
           critiqueReason: critique.reason,
@@ -242,9 +239,7 @@ export default function HomePage() {
     try {
       const response = await fetch("/api/score", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await getAuthenticatedJsonHeaders(user),
         body: JSON.stringify({
           cvText: nextCvText,
           personaId,
@@ -316,9 +311,7 @@ export default function HomePage() {
 
       const response = await fetch("/api/roast", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await getAuthenticatedJsonHeaders(user),
         body: JSON.stringify({
           cvText,
           personaId,
