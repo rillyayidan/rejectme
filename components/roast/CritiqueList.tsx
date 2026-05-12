@@ -11,12 +11,14 @@ import { CritiqueItem } from "@/components/roast/CritiqueItem";
 
 interface CritiqueListProps {
   structuredRoast: StructuredRoastResult | null;
+  fixedCritiqueIds?: string[];
   isLoading?: boolean;
   onFix?: (critique: CritiqueItemType) => void;
 }
 
 export function CritiqueList({
   structuredRoast,
+  fixedCritiqueIds = [],
   isLoading = false,
   onFix,
 }: CritiqueListProps) {
@@ -52,6 +54,13 @@ export function CritiqueList({
   const critiques = Array.isArray(structuredRoast.critiques)
     ? structuredRoast.critiques
     : [];
+  const fixedIdSet = new Set(fixedCritiqueIds);
+  const unresolvedCritiques = critiques.filter(
+    (critique) => !fixedIdSet.has(critique.id)
+  );
+  const fixedCritiques = critiques.filter((critique) =>
+    fixedIdSet.has(critique.id)
+  );
 
   const strengths = Array.isArray(structuredRoast.strengths)
     ? structuredRoast.strengths
@@ -83,8 +92,8 @@ export function CritiqueList({
         </div>
       </div>
 
-      {critiques.length > 0 ? (
-        critiques.map((critique) => (
+      {unresolvedCritiques.length > 0 ? (
+        unresolvedCritiques.map((critique) => (
           <CritiqueItem
             key={critique.id}
             critique={critique}
@@ -96,6 +105,23 @@ export function CritiqueList({
           All fixable critique items are resolved.
         </div>
       )}
+
+      {fixedCritiques.length > 0 ? (
+        <div className="space-y-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
+          <p className="text-sm font-semibold text-emerald-100">
+            Fixed Critiques
+          </p>
+
+          {fixedCritiques.map((critique) => (
+            <CritiqueItem
+              key={critique.id}
+              critique={critique}
+              onFix={onFix}
+              disabled
+            />
+          ))}
+        </div>
+      ) : null}
 
       {strengths.length > 0 ? (
         <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-4">

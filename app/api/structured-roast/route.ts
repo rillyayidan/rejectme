@@ -23,11 +23,12 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
 
-    const { cvText, personaId, targetRole, targetCompany } = body as {
+    const { cvText, personaId, targetRole, targetCompany, jobDescription } = body as {
       cvText: string;
       personaId: PersonaId;
       targetRole: string;
       targetCompany?: string;
+      jobDescription?: string;
     };
 
     if (!cvText || cvText.trim().length < 50) {
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
       personaId,
       targetRole: targetRole.trim(),
       targetCompany: targetCompany?.trim(),
+      jobDescription: jobDescription?.trim(),
     });
 
     return NextResponse.json<StructuredRoastResult>(structuredRoast);

@@ -24,11 +24,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { originalBullet, critiqueReason, personaId, targetRole } = body as {
+    const {
+      originalBullet,
+      critiqueReason,
+      personaId,
+      targetRole,
+      jobDescription,
+    } = body as {
       originalBullet: string;
       critiqueReason: string;
       personaId: PersonaId;
       targetRole: string;
+      jobDescription?: string;
     };
 
     // ── Validasi ──────────────────────────────────────────────────────────────
@@ -63,6 +70,7 @@ export async function POST(req: NextRequest) {
       critiqueReason: critiqueReason.trim(),
       personaId,
       targetRole: targetRole.trim(),
+      jobDescription: jobDescription?.trim(),
     });
 
     // Parse dua baris output: "MINIMAL: ..." dan "IDEAL: ..."

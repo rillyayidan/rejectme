@@ -47,6 +47,7 @@ export interface RoastRequest {
   personaId: PersonaId;
   targetRole: string;
   targetCompany?: string;
+  jobDescription?: string;
 }
 
 export interface FixRequest {
@@ -54,12 +55,14 @@ export interface FixRequest {
   critiqueReason: string;
   personaId: PersonaId;
   targetRole: string;
+  jobDescription?: string;
 }
 
 export interface ScoreRequest {
   cvText: string;
   personaId: PersonaId;
   targetRole: string;
+  jobDescription?: string;
 }
 
 export interface SurvivalScoreResult {
@@ -85,12 +88,16 @@ export interface SurvivalScoreResult {
 export async function streamRoast(req: RoastRequest): Promise<ReadableStream<Uint8Array>> {
   const systemPrompt = buildSystemPrompt(req.personaId, req.targetRole, req.targetCompany);
   const persona = getPersona(req.personaId);
+  const jobContext = req.jobDescription?.trim()
+    ? `\n\nTarget job description:\n${req.jobDescription.trim()}`
+    : "";
 
   const userMessage = `Berikut adalah CV yang perlu kamu review:
 
 ---
 ${req.cvText}
 ---
+${jobContext}
 
 Berikan roast yang jujur, spesifik, dan actionable sesuai standar kamu sebagai ${persona.title} di ${persona.company_type}.
 Ingat: setiap kritik harus menyebut bagian spesifik dari CV ini, bukan generik.`;
@@ -135,7 +142,7 @@ Ingat: setiap kritik harus menyebut bagian spesifik dari CV ini, bukan generik.`
   return stream;
 }
 
-function parseGeminiJson<T>(raw: string): T {
+export function parseGeminiJson<T>(raw: string): T {
   const withoutFence = raw.replace(/```json|```/g, "").trim();
 
   const jsonMatch = withoutFence.match(/\{[\s\S]*\}/);
@@ -247,7 +254,7 @@ async function withGeminiRetry<T>(
   throw lastError;
 }
 
-function normalizeStructuredRoast(
+export function normalizeStructuredRoast(
   parsed: StructuredRoastResult,
   req: RoastRequest
 ): StructuredRoastResult {
@@ -268,7 +275,7 @@ function normalizeStructuredRoast(
   };
 }
 
-function normalizeSurvivalScoreResult(
+export function normalizeSurvivalScoreResult(
   parsed: SurvivalScoreResult
 ): SurvivalScoreResult {
   return {
@@ -311,9 +318,13 @@ export async function generateStructuredRoast(
   req: RoastRequest
 ): Promise<StructuredRoastResult> {
   const persona = getPersona(req.personaId);
+  const jobContext = req.jobDescription?.trim()
+    ? `\nJob description target:\n${req.jobDescription.trim()}\n`
+    : "";
 
   const prompt = `Kamu adalah ${persona.name}, ${persona.title} di ${persona.company_type}.
 Kandidat apply sebagai: ${req.targetRole}${req.targetCompany ? ` di ${req.targetCompany}` : ""}.
+${jobContext}
 
 Analisis CV berikut dengan standar persona kamu.
 
@@ -410,10 +421,13 @@ Aturan penting:
 
 function createFallbackFixBullet(req: FixRequest): string {
   const cleanedBullet = req.originalBullet.trim().replace(/^[-•]\s*/, "");
+  const jobContext = req.jobDescription?.trim()
+    ? " dan job description target"
+    : "";
 
   return [
     `MINIMAL: ${cleanedBullet}`,
-    `IDEAL: Mengoptimalkan ${cleanedBullet.toLowerCase()} untuk mendukung target role ${req.targetRole}, dengan menambahkan konteks, kontribusi spesifik, dan hasil terukur seperti [metric] dalam [periode].`,
+    `IDEAL: Mengoptimalkan ${cleanedBullet.toLowerCase()} untuk mendukung target role ${req.targetRole}${jobContext}, dengan menambahkan konteks, kontribusi spesifik, dan hasil terukur seperti [metric] dalam [periode].`,
   ].join("\n");
 }
 
@@ -423,11 +437,15 @@ function createFallbackFixBullet(req: FixRequest): string {
  */
 export async function fixBullet(req: FixRequest): Promise<string> {
   const persona = getPersona(req.personaId);
+  const jobContext = req.jobDescription?.trim()
+    ? `\nJob description target:\n${req.jobDescription.trim()}\n`
+    : "";
 
   const prompt = `Kamu adalah ${persona.name}, ${persona.title} di ${persona.company_type}.
 
 Kandidat punya bullet point ini di CV-nya (apply sebagai ${req.targetRole}):
 "${req.originalBullet}"
+${jobContext}
 
 Masalah yang kamu temukan: ${req.critiqueReason}
 
@@ -477,9 +495,13 @@ Jangan tambahkan penjelasan lain. Hanya dua baris output.`;
  */
 export async function calculateSurvivalScore(req: ScoreRequest): Promise<SurvivalScoreResult> {
   const persona = getPersona(req.personaId);
+  const jobContext = req.jobDescription?.trim()
+    ? `\nJob description target:\n${req.jobDescription.trim()}\n`
+    : "";
 
   const prompt = `Kamu adalah ${persona.name}, ${persona.title} di ${persona.company_type}.
 Kandidat apply sebagai: ${req.targetRole}
+${jobContext}
 
 Nilai CV ini dengan rubrik spesifikmu. Berikan response HANYA dalam format JSON berikut (tidak ada teks lain):
 

@@ -7,7 +7,7 @@ import { type PersonaId } from "@/lib/personas";
 import { isAuthFailure, requireFirebaseAuth } from "@/firebase/server-auth";
 
 export const runtime = "nodejs";
-export const maxDuration = 60; // Vertex AI bisa lambat di cold start
+export const maxDuration = 60; // Gemini can be slow on cold starts
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,11 +18,12 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { cvText, personaId, targetRole, targetCompany } = body as {
+    const { cvText, personaId, targetRole, targetCompany, jobDescription } = body as {
       cvText: string;
       personaId: PersonaId;
       targetRole: string;
       targetCompany?: string;
+      jobDescription?: string;
     };
 
     // ── Validasi input ────────────────────────────────────────────────────────
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
       personaId,
       targetRole: targetRole.trim(),
       targetCompany: targetCompany?.trim(),
+      jobDescription: jobDescription?.trim(),
     });
 
     return new Response(roastStream, {

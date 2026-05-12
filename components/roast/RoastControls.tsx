@@ -5,24 +5,29 @@
 import { Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface RoastControlsProps {
   targetRole: string;
   targetCompany: string;
+  jobDescription: string;
   isLoading?: boolean;
   disabled?: boolean;
   onTargetRoleChange: (value: string) => void;
   onTargetCompanyChange: (value: string) => void;
+  onJobDescriptionChange: (value: string) => void;
   onSubmit: () => void | Promise<void>;
 }
 
 export function RoastControls({
   targetRole,
   targetCompany,
+  jobDescription,
   isLoading = false,
   disabled = false,
   onTargetRoleChange,
   onTargetCompanyChange,
+  onJobDescriptionChange,
   onSubmit,
 }: RoastControlsProps) {
   const isSubmitDisabled = disabled || isLoading || targetRole.trim().length < 2;
@@ -64,6 +69,24 @@ export function RoastControls({
             className="rounded-lg border-white/10 bg-black/35 text-neutral-100 placeholder:text-neutral-600"
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <label
+          htmlFor="job-description"
+          className="text-sm font-medium text-neutral-300"
+        >
+          Job Description
+          <span className="ml-1 text-neutral-500">(optional)</span>
+        </label>
+        <Textarea
+          id="job-description"
+          value={jobDescription}
+          disabled={isLoading}
+          onChange={(event) => onJobDescriptionChange(event.target.value)}
+          placeholder="Paste the job post requirements, responsibilities, or keywords..."
+          className="min-h-[120px] resize-y rounded-lg border-white/10 bg-black/35 text-sm leading-6 text-neutral-100 placeholder:text-neutral-600"
+        />
       </div>
 
       <Button

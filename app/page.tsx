@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   BriefcaseBusiness,
+  Copy,
   FileText,
   History,
   MessageSquareWarning,
@@ -12,6 +13,7 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CVInputEditor } from "@/components/cv-editor/CVInputEditor";
 import {
@@ -47,6 +49,7 @@ export default function HomePage() {
   const [cvText, setCvText] = useState("");
   const [targetRole, setTargetRole] = useState("");
   const [targetCompany, setTargetCompany] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
   const [personaId, setPersonaId] = useState<PersonaId>("startup");
 
   const [roast, setRoast] = useState("");
@@ -71,6 +74,8 @@ export default function HomePage() {
     useState<CritiqueItem | null>(null);
   const [fixResult, setFixResult] = useState<FixResult | null>(null);
   const [isFixing, setIsFixing] = useState(false);
+  const [fixedCritiqueIds, setFixedCritiqueIds] = useState<string[]>([]);
+  const [manualApplyMessage, setManualApplyMessage] = useState("");
 
   const selectedPersonaName =
     personaId === "bumn"
@@ -111,6 +116,7 @@ export default function HomePage() {
           personaId,
           targetRole,
           targetCompany,
+          jobDescription,
         }),
       });
 
@@ -141,6 +147,7 @@ export default function HomePage() {
     setError("");
     setSelectedCritique(critique);
     setFixResult(null);
+    setManualApplyMessage("");
     setIsFixing(true);
 
     try {
@@ -152,6 +159,7 @@ export default function HomePage() {
           critiqueReason: critique.reason,
           personaId,
           targetRole,
+          jobDescription,
         }),
       });
 
@@ -184,37 +192,24 @@ export default function HomePage() {
 
     if (!cvText.includes(original)) {
       setError(
-        "The original text was not found exactly in the CV. Copy the rewrite and paste it manually."
+        "The original text was not found exactly in the CV. Copy one rewrite and paste it manually into the CV text editor."
+      );
+      setManualApplyMessage(
+        "Exact replacement was not possible because the quoted text does not match the current CV text. Copy one rewrite below and paste it manually into the CV text editor."
       );
       return;
     }
 
     const updatedCV = cvText.replace(original, replacement);
-
-    let updatedStructuredRoast: StructuredRoastResult | null = null;
-
-    setStructuredRoast((prev) => {
-      if (!prev || !selectedCritique) {
-        return prev;
-      }
-
-      updatedStructuredRoast = {
-        ...prev,
-        critiques: prev.critiques.filter(
-          (critique) => critique.id !== selectedCritique.id
-        ),
-        quick_wins: [
-          ...(prev.quick_wins ?? []),
-          `Fixed: ${selectedCritique.issue}`,
-        ],
-      };
-
-      return updatedStructuredRoast;
-    });
+    const nextFixedCritiqueIds = Array.from(
+      new Set([...fixedCritiqueIds, selectedCritique.id])
+    );
 
     setCvText(updatedCV);
+    setFixedCritiqueIds(nextFixedCritiqueIds);
     setSelectedCritique(null);
     setFixResult(null);
+    setManualApplyMessage("");
     setError("");
 
     const nextScore = await handleScoreWithText(updatedCV);
@@ -225,7 +220,7 @@ export default function HomePage() {
         sessionId: currentSessionId,
         cvText: updatedCV,
         score: nextScore,
-        structuredRoast: updatedStructuredRoast,
+        fixedCritiqueIds: nextFixedCritiqueIds,
         status: "completed",
       }).catch((error) => {
         console.error("[handleApplyFix] Failed to update session:", error);
@@ -244,6 +239,7 @@ export default function HomePage() {
           cvText: nextCvText,
           personaId,
           targetRole,
+          jobDescription,
         }),
       });
 
@@ -272,6 +268,8 @@ export default function HomePage() {
     setScore(null);
     setCurrentSessionId(null);
     setStructuredRoast(null);
+    setFixedCritiqueIds([]);
+    setManualApplyMessage("");
 
     if (cvText.trim().length < 50) {
       setError("CV is too short. Upload a PDF or paste the CV text first.");
@@ -305,6 +303,7 @@ export default function HomePage() {
         personaId,
         targetRole: targetRole.trim(),
         targetCompany: targetCompany.trim(),
+        jobDescription: jobDescription.trim(),
       });
 
       setCurrentSessionId(sessionId);
@@ -317,6 +316,7 @@ export default function HomePage() {
           personaId,
           targetRole,
           targetCompany,
+          jobDescription,
         }),
       });
 
@@ -340,18 +340,29 @@ export default function HomePage() {
         setRoast((prev) => prev + chunk);
       }
 
+      await updateRoastSession({
+        user,
+        sessionId,
+        roast: fullRoast,
+        status: "roasting",
+      });
+
       const finalScore = await handleScore();
 
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await updateRoastSession({
+        user,
+        sessionId,
+        score: finalScore,
+        status: "roasting",
+      });
 
       const finalStructuredRoast = await handleStructuredRoast();
 
       await updateRoastSession({
         user,
         sessionId,
-        roast: fullRoast,
-        score: finalScore,
         structuredRoast: finalStructuredRoast,
+        fixedCritiqueIds: [],
         status: "completed",
       });
     } catch (err) {
@@ -388,9 +399,12 @@ export default function HomePage() {
     setPersonaId(session.personaId);
     setTargetRole(session.targetRole);
     setTargetCompany(session.targetCompany ?? "");
+    setJobDescription(session.jobDescription ?? "");
     setRoast(session.roast ?? "");
     setScore(session.score ?? null);
     setStructuredRoast(session.structuredRoast ?? null);
+    setFixedCritiqueIds(session.fixedCritiqueIds ?? []);
+    setManualApplyMessage("");
     setError("");
   }
 
@@ -496,13 +510,26 @@ export default function HomePage() {
                 placeholder="Paste your CV text here..."
               />
 
+              {fixedCritiqueIds.length > 0 ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void navigator.clipboard.writeText(cvText)}
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy final CV
+                </Button>
+              ) : null}
+
               <RoastControls
                 targetRole={targetRole}
                 targetCompany={targetCompany}
+                jobDescription={jobDescription}
                 isLoading={isRoasting}
                 disabled={!hasInput}
                 onTargetRoleChange={setTargetRole}
                 onTargetCompanyChange={setTargetCompany}
+                onJobDescriptionChange={setJobDescription}
                 onSubmit={handleRoast}
               />
             </CardContent>
@@ -634,6 +661,7 @@ export default function HomePage() {
           <CardContent className="pt-1">
             <CritiqueList
               structuredRoast={structuredRoast}
+              fixedCritiqueIds={fixedCritiqueIds}
               isLoading={isStructuringRoast}
               onFix={handleFixCritique}
             />
@@ -644,11 +672,13 @@ export default function HomePage() {
                   originalText={selectedCritique.quoted_text}
                   critiqueReason={selectedCritique.reason}
                   result={fixResult}
+                  manualApplyMessage={manualApplyMessage}
                   isLoading={isFixing}
                   onApply={handleApplyFix}
                   onClose={() => {
                     setSelectedCritique(null);
                     setFixResult(null);
+                    setManualApplyMessage("");
                     setIsFixing(false);
                   }}
                 />

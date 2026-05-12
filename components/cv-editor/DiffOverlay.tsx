@@ -15,6 +15,7 @@ interface DiffOverlayProps {
   originalText: string;
   critiqueReason: string;
   result: FixResult | null;
+  manualApplyMessage?: string;
   isLoading?: boolean;
   onApply: (replacement: string) => void;
   onClose: () => void;
@@ -24,6 +25,7 @@ export function DiffOverlay({
   originalText,
   critiqueReason,
   result,
+  manualApplyMessage,
   isLoading = false,
   onApply,
   onClose,
@@ -67,6 +69,12 @@ export function DiffOverlay({
           <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/30 p-4 text-sm text-neutral-400">
             <Loader2 className="h-4 w-4 animate-spin" />
             Writing rewrite options...
+          </div>
+        ) : null}
+
+        {manualApplyMessage ? (
+          <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 p-3 text-sm leading-6 text-amber-100">
+            {manualApplyMessage}
           </div>
         ) : null}
 
