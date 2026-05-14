@@ -1,30 +1,59 @@
 // firebase/admin.ts
 
-import { getApps, initializeApp, cert } from "firebase-admin/app";
+import {
+  applicationDefault,
+  cert,
+  getApps,
+  initializeApp,
+  type AppOptions,
+} from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 
-function getPrivateKey() {
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+function getProjectId() {
+  return (
+    process.env.FIREBASE_PROJECT_ID ??
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ??
+    process.env.GOOGLE_CLOUD_PROJECT
+  );
+}
 
-  if (!privateKey) {
-    throw new Error("FIREBASE_PRIVATE_KEY belum di-set.");
+function getFirebaseAdminOptions(): AppOptions {
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+
+  const baseOptions: AppOptions = {
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  };
+
+  if (privateKey || clientEmail) {
+    if (!privateKey || !clientEmail) {
+      throw new Error(
+        "FIREBASE_PRIVATE_KEY and FIREBASE_CLIENT_EMAIL must both be set for key-based Firebase Admin credentials."
+      );
+    }
+
+    return {
+      ...baseOptions,
+      credential: cert({
+        projectId: getProjectId(),
+        clientEmail,
+        privateKey: privateKey.replace(/\\n/g, "\n"),
+      }),
+    };
   }
 
-  return privateKey.replace(/\\n/g, "\n");
+  return {
+    ...baseOptions,
+    credential: applicationDefault(),
+    projectId: getProjectId(),
+  };
 }
 
 export const adminApp =
   getApps().length === 0
-    ? initializeApp({
-        credential: cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: getPrivateKey(),
-        }),
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      })
+    ? initializeApp(getFirebaseAdminOptions())
     : getApps()[0];
 
 export const adminAuth = getAuth(adminApp);
