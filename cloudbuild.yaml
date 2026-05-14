@@ -31,14 +31,14 @@ steps:
           --build-arg GOOGLE_CLOUD_PROJECT="${PROJECT_ID}" \
           --build-arg GOOGLE_CLOUD_LOCATION="${_GOOGLE_CLOUD_LOCATION}" \
           --build-arg GEMINI_MODEL="${_GEMINI_MODEL}" \
-          -t "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:${SHORT_SHA}" \
+          -t "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:${BUILD_ID}" \
           .
 
   - id: push-image
     name: gcr.io/cloud-builders/docker
     args:
       - push
-      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:${SHORT_SHA}
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:${BUILD_ID}
 
   - id: deploy-cloud-run
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
@@ -47,7 +47,7 @@ steps:
       - run
       - deploy
       - ${_SERVICE_NAME}
-      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:${SHORT_SHA}
+      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:${BUILD_ID}
       - --region=${_REGION}
       - --platform=managed
       - --service-account=${_SERVICE_ACCOUNT}
@@ -57,7 +57,7 @@ steps:
       - --update-secrets=NEXT_PUBLIC_FIREBASE_API_KEY=firebase-web-api-key:latest
 
 images:
-  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:${SHORT_SHA}
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}:${BUILD_ID}
 
 availableSecrets:
   secretManager:
