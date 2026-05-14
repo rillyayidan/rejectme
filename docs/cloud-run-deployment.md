@@ -93,7 +93,10 @@ firebase deploy --only firestore:rules,firestore:indexes
 ```
 
 The rules allow each authenticated user to access only
-`users/{uid}` and `users/{uid}/sessions/{sessionId}`.
+`users/{uid}` and `users/{uid}/sessions/{sessionId}`. The current session
+history query orders one user's `sessions` subcollection by `createdAt desc`,
+which Firestore supports with its automatic single-field indexes, so no
+composite index is committed yet.
 
 ## Build and deploy
 
